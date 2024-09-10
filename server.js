@@ -17,10 +17,10 @@ app.use(cors());
 app.use(helmet());
 
 
-const PORT = PORT || 5431;
+const port = PORT || 5431;
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
 });
 
 // Test route
