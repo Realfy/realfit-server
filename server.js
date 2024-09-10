@@ -1,12 +1,11 @@
 import express from "express";
-import dotenv from "dotenv";
 import bodyParser from "body-parser";
 import cors from "cors";
 import helmet from "helmet";
 import client from "./config/getDirectusClient.js";
 import { readItems } from "@directus/sdk";
+import { PORT} from "./envConfig.js";
 
-dotenv.config();
 
 // Create Express app
 const app = express();
@@ -17,10 +16,8 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(helmet());
 
-// Set application to use env variables from development
-dotenv.config({ path: ".env.development" });
 
-const PORT = process.env.PORT || 5431;
+const PORT = PORT || 5431;
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
