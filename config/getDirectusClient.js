@@ -1,16 +1,14 @@
-import { createDirectus, authentication, graphql, rest } from '@directus/sdk';
-import { DIRECTUS_API, DIRECTUS_ADMIN_EMAIL, DIRECTUS_ADMIN_PASSWORD } from '../envConfig.js';
+import { createDirectus, graphql, rest, staticToken } from '@directus/sdk';
+import { DIRECTUS_API, DIRECTUS_STATIC_TOKEN } from '../envConfig.js';
 
 let clientSetup = null;
 
 if (DIRECTUS_API) {
     clientSetup = createDirectus(DIRECTUS_API)
-        .with(authentication())
         .with(graphql())
-        .with(rest());
-    await clientSetup.login(DIRECTUS_ADMIN_EMAIL, DIRECTUS_ADMIN_PASSWORD);
+        .with(rest())
+        .with(staticToken(DIRECTUS_STATIC_TOKEN));
 }
 
 const client = clientSetup;
-
 export default client;
