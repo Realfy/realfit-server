@@ -4,7 +4,9 @@ import cors from "cors";
 import helmet from "helmet";
 import client from "./config/getDirectusClient.js";
 import { readItems } from "@directus/sdk";
-import { PORT} from "./envConfig.js";
+import { PORT } from "./envConfig.js";
+import cookieParser from "cookie-parser";
+import { verifyToken as verifyTokenMiddleware } from './middleware/verifyToken.js';
 
 
 // Create Express app
@@ -15,6 +17,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cors());
 app.use(helmet());
+app.use(cookieParser());
 
 
 const port = PORT || 5431;
@@ -39,3 +42,13 @@ app.use('/api/diet', dietRouter);
 // Exercise routes
 import exerciseRouter from './router/directus/exerciseRouter.js'
 app.use('/api/exercise', exerciseRouter);
+
+
+// Auth routes
+import authRouter from './router/authRouter.js';
+app.use('/api/auth', authRouter);
+
+
+// Profile routes
+import profileRouter from './router/profileRouter.js';
+app.use('/api/profile', verifyTokenMiddleware,profileRouter);
