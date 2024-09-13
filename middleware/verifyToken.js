@@ -6,7 +6,7 @@ export async function verifyToken(req, res, next) {
     const { verify, sign } = jsonwebtoken;
     let token = req.headers["authorization"];
     if (!token || token.length <= 7 || !token.startsWith("Bearer")) {  // Bearer TOKEN
-        return res.status(401).json({ code: -1, message: "Access denied. No token provided." });
+        return res.status(401).json({ code: -2, message: "Access denied. No token provided." });
     }
     try {
         token = token.substring('7');

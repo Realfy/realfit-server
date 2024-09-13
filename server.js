@@ -51,4 +51,4 @@ app.use('/api/auth', authRouter);
 
 // Profile routes
 import profileRouter from './router/profileRouter.js';
-app.use('/api/profile', verifyTokenMiddleware,profileRouter);
+app.use('/api/user/profile', verifyTokenMiddleware, profileRouter);

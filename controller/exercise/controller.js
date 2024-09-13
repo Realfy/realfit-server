@@ -27,8 +27,8 @@ export async function getExercisesFromCmsBasedOnMuscleGroup(req, res) {
         return res.status(200).json({ code: 1, data: list });
     }
     catch (err) {
-        console.log(err);
         console.log("Caught exception in controller.directus.exercise.getExercisesFromCmsBasedOnMuscleGroup() due to " + err);
+        console.log(err);
         return res.status(500).json({ code: -1, message: "Failed to get exercises based on muscle group." });
     }
 }

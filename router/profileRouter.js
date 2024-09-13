@@ -3,7 +3,6 @@ import { updateUserProfileDetails } from "../controller/user_profile/controller.
 
 const router = express.Router();
 
-//TODO: Complete this controller
-router.post('/v1/update', updateUserProfileDetails);
+router.post('/v1/save', updateUserProfileDetails);
 
 export default router
