@@ -22,7 +22,7 @@ export async function getItemsListFromCMS(req, res) {
         return res.status(200).json({ code: 1, data: itemsList, message: "Diet items list fetched successfully" });
     }
     catch (err) {
-        console.log(err.errors)
+        console.log(err)
         console.log("Caught exception in controller.diet.getItemsListFromCMS() due to " + err);
         return res.status(500).json({ code: -1, message: "Failed to get list of items from CMS" });
     }
@@ -62,7 +62,8 @@ export async function getDietPlanWithCaloriesCount(req, res) {
         return res.status(200).json({ code: 1, data: result, message: "Diet planed successfully." });
     }
     catch (err) {
-        console.log("Caught exception in controller.diet.getDietPlanWithCaloriesCount() due to " + err);
+        console.log("Caught exception in controller.diet.getDietPlanWithCaloriesCount() due to ");
+        console.log(err);
         return res.status(500).json({ code: -1, message: 'Failed to get diet plan' });
     }
 }
