@@ -52,3 +52,8 @@ app.use('/api/auth', authRouter);
 // Profile routes
 import profileRouter from './router/profileRouter.js';
 app.use('/api/user/profile', verifyTokenMiddleware, profileRouter);
+
+
+// Save user preferences
+import preferenceRouter from './router/preferenceRouter.js';
+app.use('/api/preference', verifyTokenMiddleware, preferenceRouter);
