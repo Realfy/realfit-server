@@ -35,9 +35,15 @@ app.post('/', async (req, res) => {
 });
 
 
-// Diet routes
+// Diet routes for CMS
 import dietRouter from './router/directus/dietRouter.js';
-app.use('/api/diet', dietRouter);
+app.use('/api/cms/diet', dietRouter);
+
+// Diet routes for user specific
+import dietRouterUser from './router/dietRouter.js';
+import { getDietPlanWithAITest } from "./controller/diet/controller.js";
+app.post('/api/diet/test/suggest', getDietPlanWithAITest)
+app.use('/api/diet', verifyTokenMiddleware, dietRouterUser);
 
 // Exercise routes
 import exerciseRouter from './router/directus/exerciseRouter.js'
