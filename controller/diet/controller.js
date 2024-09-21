@@ -111,7 +111,7 @@ export async function getDietPlanWithAITest(req, res) {
         caloriesGoal: req.body.caloriesGoal || null,
         allergies: req.body.allergies || null,
         currentDietPlan: req.body.currentDietPlan || null,
-        availableFoodItems: req.body.availableFoodItems || null,
+        cuisine: req.body.cuisine || null
     };
     const userDetails = Object.entries(userDetailsBody)
         .reduce((acc, [key, value]) => {
