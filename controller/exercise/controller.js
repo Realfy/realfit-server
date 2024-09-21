@@ -1,6 +1,7 @@
 import { readItems } from "@directus/sdk";
 import client from "../../config/getDirectusClient.js";
 import { directusCollections } from "../../directus/collections.js";
+import { getExercisePlanSuggestPrompt, getGptResponse } from "../../helpers/getGptResponse.js";
 
 // Get list of all the exercises based on target muscle group
 export async function getExercisesFromCmsBasedOnMuscleGroup(req, res) {
@@ -27,7 +28,7 @@ export async function getExercisesFromCmsBasedOnMuscleGroup(req, res) {
         return res.status(200).json({ code: 1, data: list });
     }
     catch (err) {
-        console.log("Caught exception in controller.directus.exercise.getExercisesFromCmsBasedOnMuscleGroup() due to " + err);
+        console.log("Caught exception in controller.exercise.getExercisesFromCmsBasedOnMuscleGroup() due to " + err);
         console.log(err);
         return res.status(500).json({ code: -1, message: "Failed to get exercises based on muscle group." });
     }
@@ -43,7 +44,7 @@ export async function getExerciseGroupsAndCategories(req, res) {
         return res.status(200).json({ code: 1, message: "List fetched successfully.", data: list });
     }
     catch (err) {
-        console.log("Caught error in controller.directus.exercise.controller() due to");
+        console.log("Caught error in controller.exercise.controller() due to");
         console.log(err);
         res.status(500).json({ code: -1, message: "Failed to get of exercise groups and its categories" });
     }
@@ -91,7 +92,7 @@ export async function getExerciseDataFromCmsWithFilters(request, response) {
         return response.status(200).json({ code: 1, data: result });
     }
     catch (err) {
-        console.log("Caught exception in controller.directus.exercise.getExerciseDataFromCmsWithFilters() due to");
+        console.log("Caught exception in controller.exercise.getExerciseDataFromCmsWithFilters() due to");
         console.log(err)
         return response.status(500).json({ code: -1, message: "Failed to get exercise data" })
     }
@@ -99,3 +100,29 @@ export async function getExerciseDataFromCmsWithFilters(request, response) {
 
 
 // TODO: Get list of exercises with AI
+export async function getExercisePlanWithAI(req, res) {
+    try {
+        const { workoutDays, injuries, exerciseLevel, workoutType } = req.body;
+        const userDetails = {};
+        if (workoutDays) {
+            userDetails.workoutDays = workoutDays
+        }
+        if (injuries) {
+            userDetails.injuries = injuries
+        }
+        if (exerciseLevel) {
+            userDetails.exerciseLevel = exerciseLevel
+        }
+        if (workoutType) {
+            userDetails.workoutType = workoutType;
+        }
+        const prompt = getExercisePlanSuggestPrompt(userDetails);
+        const response = getGptResponse(prompt)
+        return res.send(response);
+    }
+    catch (err) {
+        console.log("Caught exception in controller.exercise.getExercisePlanWithAI() due to");
+        console.log(err)
+        return res.status(500).json({ code: -1, message: "Failed to get exercise plan with AI." });
+    }
+}

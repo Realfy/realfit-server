@@ -47,3 +47,8 @@ export function getDietPlanSuggestPrompt(userDetails) {
     
     return prompt;
 }
+
+
+export function getExercisePlanSuggestPrompt(userDetails) {
+    // TODO: Complete this function
+}
