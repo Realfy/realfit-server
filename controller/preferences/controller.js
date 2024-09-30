@@ -56,6 +56,7 @@ export async function saveUserDietPreferences(req, res) {
 }
 
 
+// TODO: Add Cuisine based on user choice. (Multiple values can be chosen)
 export async function saveUserExercisePreferences(req, res) {
     try {
         const EXERCISE_LEVEL = ["basic", "intermediate", "advanced"];
