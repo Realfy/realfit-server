@@ -1,5 +1,4 @@
 import jsonwebtoken from 'jsonwebtoken';
-import db from '../../config/firestoreConfig.js';
 import { JWT_ACCESS_TOKEN_SECRET, JWT_REFRESH_TOKEN_SECRET } from '../../envConfig.js';
 
 export async function signUserToken(req, res) {
@@ -25,12 +24,12 @@ export async function signUserToken(req, res) {
         const data = {
             accessToken: accessToken, refreshToken
         };
-        return res.status(200).json({code: 1, message: "User signed in successfully.",data})
+        return res.status(200).json({ code: 1, message: "User signed in successfully.", data });
     }
     catch (err) {
         console.log("Caught error in controller.authController() due to ");
         console.log(err)
-        return res.status(500).json({ code: -1, message: "Failed to sign user. Please try again"})
+        return res.status(500).json({ code: -1, message: "Failed to sign user. Please try again" });
     }
 }
 

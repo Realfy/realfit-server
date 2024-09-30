@@ -19,3 +19,6 @@ export const FIRESTORE_CONFIG = JSON.parse(process.env.FIRESTORE_CONFIG);
 // JWT Tokens
 export const JWT_ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_TOKEN_SECRET;
 export const JWT_REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_TOKEN_SECRET;
+
+// OpenAI Key
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
