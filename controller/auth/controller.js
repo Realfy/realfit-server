@@ -1,5 +1,7 @@
 import jsonwebtoken from 'jsonwebtoken';
 import { JWT_ACCESS_TOKEN_SECRET, JWT_REFRESH_TOKEN_SECRET } from '../../envConfig.js';
+import db from "../../config/firestoreConfig.js";
+import { fireStoreCollections } from "../../utils/collection/firestore.js";
 
 export async function signUserToken(req, res) {
     const { sign } = jsonwebtoken;
@@ -14,6 +16,13 @@ export async function signUserToken(req, res) {
         const payload = {
             email: email,
             userId: userId
+        }
+        const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            await userRef.set({
+                email: email
+            });
         }
         const accessToken = sign(payload, JWT_ACCESS_TOKEN_SECRET, {
             expiresIn: "1h"

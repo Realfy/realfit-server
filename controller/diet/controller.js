@@ -3,7 +3,9 @@ import client from "../../config/getDirectusClient.js";
 import { directusCollections } from '../../directus/collections.js';
 import { caloriesDistribution } from "../../helpers/dietCaloriesDistribution.js";
 import { getDietPlanSuggestPrompt, getGptResponse } from "../../helpers/getGptResponse.js";
-
+import db from "../../config/firestoreConfig.js";
+import { fireStoreCollections } from "../../utils/collection/firestore.js";
+import { validateDietPlanItem } from "../../helpers/validateDietItem.js";
 
 // Get list of all the food products available in our CMS in ascending order of ID
 export async function getItemsListFromCMS(req, res) {
@@ -102,7 +104,7 @@ export async function getDietPlanWithAI(req, res) {
     }
 }
 
-// Test route to check model effciency with variable user data
+// Test route to check model efficiency with variable user data
 export async function getDietPlanWithAITest(req, res) {
     const userDetailsBody = {
         userDescription: req.body.userDescription || null,
@@ -138,5 +140,235 @@ export async function getDietPlanWithAITest(req, res) {
         console.log("Caught exception in controller.diet.controller.getDietPlanWithAITest due to ");
         console.error(err);
         return res.status(500).json({ code: -1, message: "Failed to suggest diet plan with AI." });
+    }
+}
+
+
+//* Diet item schema
+/*
+{
+    id: 'some id',
+    title: 'some title',
+    quantity_taken: 'some quantity (in grams)',
+    calories: 'some calories (in k.cal)',
+    meal_type: 'some meal type (either breakfast, lunch, snacks, dinner, pre-workout, post-workout)'
+}
+*/
+export async function saveCurrentDayDietPlan(req, res) {
+    try {
+        let userId = req.payload.userId;
+        if (!isNaN(userId))
+            userId = "" + userId;
+        // Request body payload
+        const { plan } = req.body;
+        if (!plan || !Array.isArray(plan) || plan.length == 0) {
+            return res.status(400).json({ code: 0, message: 'Please provide valid diet plan' });
+        }
+        // Validate diet plan objects
+        const validateDietPlanResponse = validateDietPlanItem(plan);
+        if (validateDietPlanResponse.code != 1) {
+            return res.status(400).json({ code: validateDietPlanResponse.code, message: validateDietPlanResponse.message });
+        }
+        const currDate = new Date();
+        const key = currDate.getFullYear() + "" + String(currDate.getMonth()+1).padStart(2, '0') + "" + String(currDate.getDate()).padStart(2, '0');
+        const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ code: 0, message: 'User not found.' })
+        }
+        const dietRef = userRef.collection(fireStoreCollections.userData.subCollections.diet.everyDayPlan.title).doc(key);
+        await dietRef.set({
+            data: plan,
+            date: currDate
+        }, { merge: true });
+        return res.status(200).json({ code: 1, message: 'Current day diet plan saved.' });
+    }
+    catch (err) {
+        console.log("Caught error in controller.diet.controller.saveCurrentDayDietPlan() due to");
+        console.error(err);
+        return res.status(500).json({ code: -1, message: 'Failed to save diet plan.' });
+    }
+}
+
+
+// TODO: Find a way to trigger this method, either directly after AI generating this plan and call it from client
+// TODO: Save preferences also
+export async function saveLatestDietPlanTemplate(req, res) {
+    try {
+        const SOURCE_BY = ['self', 'ai', 'expert'];
+        let { source, plan, id, updated_at, created_at } = req.body;
+        let userId = req.payload.userId;
+
+        if (!isNaN(userId)) {
+            userId = "" + userId;
+        }
+
+        // Validate request body
+        if (!source || !plan || !id) {
+            return res.status(400).json({ code: 0, message: "Source, diet plan, and id fields are required." });
+        }
+
+        // Validate source object
+        if (!source || typeof source !== 'object') {
+            return res.status(400).json({ code: 0, message: 'Source must be an object with `by` (required) and `data` fields.' });
+        }
+
+        if (!source.by) {
+            return res.status(400).json({ code: 0, message: 'Source object should contain `by` field.' });
+        }
+
+        if (!SOURCE_BY.includes(source.by)) {
+            return res.status(400).json({ code: 0, message: `Invalid source.by value. Must be one of: ${SOURCE_BY.join(', ')}` });
+        }
+
+        if (source.by === 'expert' && !source.data) {
+            // TODO: Validate data filed incase of expert that to add expert id, template_id (incase of global), etc.. (Discuss with Jayanth)
+            return res.status(400).json({ code: 0, message: 'In case of plan suggested by expert, their data must be provided.' });
+        }
+
+        // Validate plan
+        if (!Array.isArray(plan) || plan.length === 0) {
+            return res.status(400).json({ code: 0, message: 'Please provide a valid non-empty diet plan.' });
+        }
+
+        // Validate diet plan items
+        const validateDietPlanResponse = validateDietPlanItem(plan);
+        if (validateDietPlanResponse.code !== 1) {
+            return res.status(400).json({ code: validateDietPlanResponse.code, message: validateDietPlanResponse.message });
+        }
+
+        // Validate dates
+        if (updated_at && isNaN(Date.parse(updated_at))) {
+            return res.status(400).json({ code: 0, message: 'Invalid updated_at date format.' });
+        }
+
+        if (created_at && isNaN(Date.parse(created_at))) {
+            return res.status(400).json({ code: 0, message: 'Invalid created_at date format.' });
+        }
+
+        if (!updated_at) {
+            updated_at = new Date();
+        }
+
+        if (!created_at) {
+            created_at = new Date();
+        }
+
+        // Data to store
+        const data = { source, plan, created_at, updated_at };
+
+        // Save diet plan template
+        const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
+        const userDoc = await userRef.get();
+
+        if (!userDoc.exists) {
+            return res.status(404).json({ code: 0, message: 'User not found.' });
+        }
+
+        const dietTemplateDoc = db.collection(fireStoreCollections.userData.subCollections.diet.dietTemplate.title).doc(id);
+        const saved = await dietTemplateDoc.set(data);
+        console.log(saved)
+
+        return res.status(200).json({ code: 1, message: 'Diet template saved successfully.' });
+    } catch (err) {
+        console.error('Caught error in controller.diet.controller.saveLatestDietPlanTemplate: ', err);
+        return res.status(500).json({ code: -1, message: 'Failed to save diet plan template.' });
+    }
+}
+
+
+export async function getLatestDietTemplate(req, res) {
+    try {
+        let userId = req.payload.userId;
+        if (!isNaN(userId))
+            userId = "" + userId;
+        const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ code: 0, message: 'User not found.' })
+        }
+        const latestDoc =
+            userRef.collection(fireStoreCollections.userData.subCollections.diet.dietTemplate.title)
+                .orderBy('updated_at', 'desc')
+                .limit(1)
+                .get()
+        if (!latestDoc.empty) {
+            const docData = latestDoc.docs[0].data();
+            return res.status(200).json({ code: 1, message: "Returned recently updated diet plan template.", data: docData });
+        }
+        return res.status(404).json({ code: 0, message: "No diet plan template found" });
+    }
+    catch (err) {
+        console.log("Caught error in controller.diet.controller.getLatestDietTemplate() due to: ");
+        console.error(err);
+        return res.json({code: -1, message: "Failed to get latest diet plan template."})
+    }
+}
+
+
+export async function getDietPlanWithId(req, res) {
+    try {
+        let userId = req.payload.userId;
+        if (!isNaN(userId))
+            userId = "" + userId;
+        const id = req.params.id || null;
+        if (!id) {
+            return res.status(400).json({ code: 0, message: 'Please provide valid diet plan ID.' });
+        }
+        const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ code: 0, message: 'User not found.' })
+        }
+        const dietPlanDoc =
+            await userRef.collection(fireStoreCollections.userData.subCollections.diet.everyDayPlan.title).doc(id).get()
+        if (dietPlanDoc.exists) {
+            const docData = dietPlanDoc.data();
+            return res.status(200).json({ code: 1, message: "Returned diet plan with given ID.", data: docData });
+        }
+        return res.status(404).json({ code: 0, message: "No diet plan found with the given ID." });
+    }
+    catch (err) {
+        console.log("Caught error in controller.diet.controller.getDietPlanWithId() due to: ");
+        console.error(err);
+        return res.json({ code: -1, message: "Failed to get requested diet plan." })
+    }
+}
+
+
+export async function getDietPlanList(req, res) {
+    try {
+        let userId = req.payload.userId;
+        if (!isNaN(userId))
+            userId = "" + userId;
+
+        const limit = parseInt(req.query.limit) || 15;
+        const skip = parseInt(req.query.skip) || 0;
+
+        const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ code: 0, message: 'User not found.' })
+        }
+        const dietPlanQuery = userRef.collection(fireStoreCollections.userData.subCollections.diet.everyDayPlan.title)
+            .orderBy('date', 'desc')
+            .limit(limit)
+            .offset(skip);
+
+        const dietPlanDoc = await dietPlanQuery.get();
+
+        if (!dietPlanDoc.empty) {
+            const docData = dietPlanDoc.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            return res.status(200).json({ code: 1, message: "Returned diet plan list", data: docData });
+        }
+        return res.status(404).json({ code: 0, message: "No diet plans found." });
+    }
+    catch (err) {
+        console.log("Caught error in controller.diet.controller.getDietPlanList() due to: ");
+        console.error(err);
+        return res.json({ code: -1, message: "Failed to get diet plan list" })
     }
 }

@@ -41,7 +41,7 @@ app.use('/api/cms/diet', dietRouter);
 
 // Diet routes for user specific
 import dietRouterUser from './router/dietRouter.js';
-import { getDietPlanWithAITest } from "./controller/diet/controller.js";
+import { getDietPlanWithAITest } from "./controller/diet/controller.js"; // TODO: Remove this part
 app.post('/api/diet/test/suggest', getDietPlanWithAITest)
 app.use('/api/diet', verifyTokenMiddleware, dietRouterUser);
 

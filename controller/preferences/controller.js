@@ -1,18 +1,20 @@
 import db from "../../config/firestoreConfig.js";
 import { fireStoreCollections } from "../../utils/collection/firestore.js";
 
-// TODO: Validate current diet plan items
+
+// Save user basic diet preferences like dietary type, allergies and cuisine
+// TODO: If need provide enum type for cuisine to maintain consistency.
 export async function saveUserDietPreferences(req, res) {
     try {
         const DIETARY_TYPE = ['vegan', 'vegetarian', 'paleo', 'keto', 'no preference'];
-        let { dietaryType, allergies, currentDiet } = req.body;
+        let { dietaryType, allergies, cuisine } = req.body;
         let userId = req.payload.userId;
         if (!isNaN(userId))
             userId = "" + userId;
         if (typeof dietaryType === 'string')
             dietaryType = dietaryType.toLowerCase();
 
-        if (!dietaryType && !allergies && !currentDiet) {
+        if (!dietaryType && !allergies) {
             return res.status(400).json({ code: 0, message: 'Please provide at least one of the following: dietary type, allergies, or current diet preferences.' });
         }
         if (dietaryType && !DIETARY_TYPE.includes(dietaryType)) {
@@ -22,11 +24,12 @@ export async function saveUserDietPreferences(req, res) {
         if (allergies && (!Array.isArray(allergies) || !allergies.every(item => typeof item === 'string'))) {
             return res.status(400).json({ code: 0, message: 'Allergies must be an array of strings' });
         }
-        // Validate currentDiet (should be an array of objects)
-        if (currentDiet && (!Array.isArray(currentDiet) || !currentDiet.every(item => typeof item === 'object'))) {
-            return res.status(400).json({ code: 0, message: 'Current diet must be an array of objects' });
+        // Validate cuisine that user prefer (should be an array of strings)
+        if (allergies && (!Array.isArray(allergies) || !allergies.every(item => typeof item === 'string'))) {
+            return res.status(400).json({ code: 0, message: 'Cuisine must be an array of strings' });
         }
-        const userRef = db.collection(fireStoreCollections.userProfile.title).doc(userId);
+        
+        const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
         const userDoc = await userRef.get();
         if (userDoc.exists) {
             const dietPreferenceCollectionData = {
@@ -36,12 +39,12 @@ export async function saveUserDietPreferences(req, res) {
             }
             if (allergies)
                 dietPreferenceCollectionData.allergies = allergies;
-            if (currentDiet)
-                dietPreferenceCollectionData.currentDiet = currentDiet;
+            if (cuisine)
+                dietPreferenceCollectionData.cuisine = cuisine;
 
             const preferenceRef = userRef
-                .collection(fireStoreCollections.userProfile.subCollections.dietPreference.title)
-                .doc(userId + "_diet");
+                .collection(fireStoreCollections.userData.subCollections.preferences.diet.title)
+                .doc("data");
             await preferenceRef.set(dietPreferenceCollectionData, {merge: true});
             return res.status(200).json({ code: 1, message: 'Diet preferences updated.' });
         }
@@ -56,7 +59,6 @@ export async function saveUserDietPreferences(req, res) {
 }
 
 
-// TODO: Add Cuisine based on user choice. (Multiple values can be chosen)
 export async function saveUserExercisePreferences(req, res) {
     try {
         const EXERCISE_LEVEL = ["basic", "intermediate", "advanced"];
@@ -103,7 +105,7 @@ export async function saveUserExercisePreferences(req, res) {
         if (favoriteWorkouts && (!Array.isArray(favoriteWorkouts) || !favoriteWorkouts.every(item => typeof item === 'string')))
             return res.status(400).json({ code: 0, message: 'Workouts must be an array of strings' });
 
-        const userRef = db.collection(fireStoreCollections.userProfile.title).doc(userId);
+        const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
         const userDoc = await userRef.get();
         if (userDoc.exists) {
             const exercisePreferenceData = {};
@@ -119,8 +121,8 @@ export async function saveUserExercisePreferences(req, res) {
                 exercisePreferenceData.workoutType = workoutType;
 
             const preferenceRef = userRef
-                .collection(fireStoreCollections.userProfile.subCollections.exercisePreference.title)
-                .doc(userId + "_exercise");
+                .collection(fireStoreCollections.userData.subCollections.preferences.exercise.title)
+                .doc("data");
             await preferenceRef.set(exercisePreferenceData, { merge: true });
             return res.status(200).json({ code: 1, message: 'Exercise preferences updated.' });
         }
