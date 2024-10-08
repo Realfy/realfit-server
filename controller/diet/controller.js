@@ -5,7 +5,7 @@ import { caloriesDistribution } from "../../helpers/dietCaloriesDistribution.js"
 import { getDietPlanSuggestPrompt, getGptResponse } from "../../helpers/getGptResponse.js";
 import db from "../../config/firestoreConfig.js";
 import { fireStoreCollections } from "../../utils/collection/firestore.js";
-import { validateDietPlanItem } from "../../helpers/validateDietItem.js";
+import { validateDietPlanItem, validateDietPreferencesObject } from "../../helpers/validators.js";
 
 // Get list of all the food products available in our CMS in ascending order of ID
 export async function getItemsListFromCMS(req, res) {
@@ -192,11 +192,10 @@ export async function saveCurrentDayDietPlan(req, res) {
 
 
 // TODO: Find a way to trigger this method, either directly after AI generating this plan and call it from client
-// TODO: Save preferences also
 export async function saveLatestDietPlanTemplate(req, res) {
     try {
         const SOURCE_BY = ['self', 'ai', 'expert'];
-        let { source, plan, id, updated_at, created_at } = req.body;
+        let { source, plan, id, updated_at, created_at, preferences } = req.body;
         let userId = req.payload.userId;
 
         if (!isNaN(userId)) {
@@ -204,7 +203,7 @@ export async function saveLatestDietPlanTemplate(req, res) {
         }
 
         // Validate request body
-        if (!source || !plan || !id) {
+        if (!source || !plan || !id || !preferences) {
             return res.status(400).json({ code: 0, message: "Source, diet plan, and id fields are required." });
         }
 
@@ -237,6 +236,20 @@ export async function saveLatestDietPlanTemplate(req, res) {
             return res.status(400).json({ code: validateDietPlanResponse.code, message: validateDietPlanResponse.message });
         }
 
+        //* validate preferences
+        if (!preferences || typeof preferences !== 'object') {
+            return res.status(400).json({ code: 0, message: 'Please provide a valid non-empty preferences.' });
+        }
+        let { dietary_type, cuisine, allergies } = preferences;
+        if (!dietary_type && !allergies && !cuisine) {
+            return res.status(400).json({ code: 0, message: 'Please provide at least one of the following: dietary type, allergies, or current diet preferences.' });
+        }
+        if (typeof dietary_type === 'string')
+            dietary_type = dietary_type.toLowerCase();
+        const validateDietPreferencesObjectResponse = validateDietPreferencesObject({ dietaryType: dietary_type, allergies: allergies, cuisine: cuisine })
+        if (validateDietPreferencesObjectResponse.code != 1)
+            return res.status(400).json({ code: validateDietPreferencesObjectResponse.code, message: validateDietPreferencesObjectResponse.message });
+
         // Validate dates
         if (updated_at && isNaN(Date.parse(updated_at))) {
             return res.status(400).json({ code: 0, message: 'Invalid updated_at date format.' });
@@ -246,13 +259,10 @@ export async function saveLatestDietPlanTemplate(req, res) {
             return res.status(400).json({ code: 0, message: 'Invalid created_at date format.' });
         }
 
-        if (!updated_at) {
+        if (!updated_at)
             updated_at = new Date();
-        }
-
-        if (!created_at) {
+        if (!created_at)
             created_at = new Date();
-        }
 
         // Data to store
         const data = { source, plan, created_at, updated_at };
@@ -261,12 +271,11 @@ export async function saveLatestDietPlanTemplate(req, res) {
         const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
         const userDoc = await userRef.get();
 
-        if (!userDoc.exists) {
+        if (!userDoc.exists)
             return res.status(404).json({ code: 0, message: 'User not found.' });
-        }
 
-        const dietTemplateDoc = db.collection(fireStoreCollections.userData.subCollections.diet.dietTemplate.title).doc(id);
-        const saved = await dietTemplateDoc.set(data);
+        const dietTemplateDoc = userRef.collection(fireStoreCollections.userData.subCollections.diet.dietTemplate.title).doc(id);
+        const saved = await dietTemplateDoc.set(data, {merge: true});
         console.log(saved)
 
         return res.status(200).json({ code: 1, message: 'Diet template saved successfully.' });

@@ -37,3 +37,25 @@ export function validateDietPlanItem(plan) {
     }
     return { code: 1, message: 'All the diet items are validated.' }
 }
+
+
+// TODO: If need provide enum type for cuisine to maintain consistency.
+export function validateDietPreferencesObject(preferences) {
+    const DIETARY_TYPE = ['vegan', 'vegetarian', 'paleo', 'keto', 'no preference'];
+    let { dietaryType, allergies, cuisine } = preferences;
+
+    if (typeof dietaryType === 'string')
+        dietaryType = dietaryType.toLowerCase();
+    if (dietaryType && !DIETARY_TYPE.includes(dietaryType)) {
+        return { code: 0, message: 'Invalid dietary type. Must be one of: ' + DIETARY_TYPE.join(', ') };
+    }
+    // Validate allergies (should be an array of strings)
+    if (allergies && (!Array.isArray(allergies) || !allergies.every(item => typeof item === 'string'))) {
+        return { code: 0, message: 'Allergies must be an array of strings' };
+    }
+    // Validate cuisine that user prefer (should be an array of strings)
+    if (cuisine && (!Array.isArray(cuisine) || !cuisine.every(item => typeof item === 'string'))) {
+        return { code: 0, message: 'Cuisine must be an array of strings' };
+    }
+    return { code: 1, message: 'Preferences are validated successfully.' }
+}

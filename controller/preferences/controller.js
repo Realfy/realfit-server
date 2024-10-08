@@ -1,33 +1,26 @@
+import { validateDietPreferencesObject } from "../../helpers/validators.js";
 import db from "../../config/firestoreConfig.js";
 import { fireStoreCollections } from "../../utils/collection/firestore.js";
 
 
 // Save user basic diet preferences like dietary type, allergies and cuisine
-// TODO: If need provide enum type for cuisine to maintain consistency.
 export async function saveUserDietPreferences(req, res) {
     try {
-        const DIETARY_TYPE = ['vegan', 'vegetarian', 'paleo', 'keto', 'no preference'];
         let { dietaryType, allergies, cuisine } = req.body;
         let userId = req.payload.userId;
         if (!isNaN(userId))
             userId = "" + userId;
+
+        if (!dietaryType && !allergies && !cuisine) {
+            return res.status(400).json({ code: 0, message: 'Please provide at least one of the following: dietary type, allergies, or current diet preferences.' });
+        }
+
         if (typeof dietaryType === 'string')
             dietaryType = dietaryType.toLowerCase();
 
-        if (!dietaryType && !allergies) {
-            return res.status(400).json({ code: 0, message: 'Please provide at least one of the following: dietary type, allergies, or current diet preferences.' });
-        }
-        if (dietaryType && !DIETARY_TYPE.includes(dietaryType)) {
-            return res.status(400).json({ code: 0, message: 'Invalid dietary type. Must be one of: ' + DIETARY_TYPE.join(', ') });
-        }
-        // Validate allergies (should be an array of strings)
-        if (allergies && (!Array.isArray(allergies) || !allergies.every(item => typeof item === 'string'))) {
-            return res.status(400).json({ code: 0, message: 'Allergies must be an array of strings' });
-        }
-        // Validate cuisine that user prefer (should be an array of strings)
-        if (allergies && (!Array.isArray(allergies) || !allergies.every(item => typeof item === 'string'))) {
-            return res.status(400).json({ code: 0, message: 'Cuisine must be an array of strings' });
-        }
+        const validateDietPreferencesObjectResponse = validateDietPreferencesObject({dietaryType: dietaryType, allergies: allergies, cuisine: cuisine})
+        if (validateDietPreferencesObjectResponse.code != 1)
+            return res.status(400).json({ code: validateDietPreferencesObjectResponse.code, message: validateDietPreferencesObjectResponse.message });
         
         const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
         const userDoc = await userRef.get();
