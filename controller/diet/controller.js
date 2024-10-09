@@ -255,6 +255,10 @@ export async function saveLatestDietPlanTemplate(req, res) {
             return res.status(400).json({ code: 0, message: 'Invalid updated_at date format.' });
         }
 
+        if (updated_at && !created_at) {
+            return res.status(400).json({ code: 0, message: 'Please provide created_at date incase of update_at field is mentioned.' });
+        }
+
         if (created_at && isNaN(Date.parse(created_at))) {
             return res.status(400).json({ code: 0, message: 'Invalid created_at date format.' });
         }
@@ -265,7 +269,7 @@ export async function saveLatestDietPlanTemplate(req, res) {
             created_at = new Date();
 
         // Data to store
-        const data = { source, plan, created_at, updated_at };
+        const data = { source, plan, created_at, updated_at, preferences };
 
         // Save diet plan template
         const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
