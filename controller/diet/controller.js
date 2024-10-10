@@ -160,10 +160,16 @@ export async function saveCurrentDayDietPlan(req, res) {
         if (!isNaN(userId))
             userId = "" + userId;
         // Request body payload
-        const { plan } = req.body;
+        const { plan, template_id } = req.body;
         if (!plan || !Array.isArray(plan) || plan.length == 0) {
             return res.status(400).json({ code: 0, message: 'Please provide valid diet plan' });
         }
+
+        // Validate template_id
+        if (!template_id || template_id.length == 0) {
+            return res.status(400).json({ code: 0, message: "Please provide valid template id for current diet." });
+        }
+
         // Validate diet plan objects
         const validateDietPlanResponse = validateDietPlanItem(plan);
         if (validateDietPlanResponse.code != 1) {
@@ -315,6 +321,34 @@ export async function getLatestDietTemplate(req, res) {
         console.log("Caught error in controller.diet.controller.getLatestDietTemplate() due to: ");
         console.error(err);
         return res.json({code: -1, message: "Failed to get latest diet plan template."})
+    }
+}
+
+
+export async function getTemplateById(req, res) {
+    try {
+        const id = req.params.id;
+        if (!id)
+            return res.status(400).json({ code: 0, message: "Please provide valid template id." });
+        let userId = req.payload.userId;
+        if (!isNaN(userId))
+            userId = "" + userId;
+        const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ code: 0, message: 'User not found.' })
+        }
+        const templateDoc = await userRef.collection(fireStoreCollections.userData.subCollections.diet.dietTemplate.title).doc(id).get();
+        if (templateDoc.exists) {
+            const templateData = templateDoc.data();
+            return res.status(200).json({ code: 1, message: "Returned requested template.", data: templateData });
+        }
+        return res.status(404).json({ code: 0, message: "No template found." });
+    }
+    catch (err) {
+        console.log("Caught error in controller.diet.controller.getTemplateById() due to: ");
+        console.error(err);
+        return res.json({ code: -1, message: "Failed to get requested diet template." })
     }
 }
 
