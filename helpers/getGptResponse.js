@@ -85,3 +85,66 @@ Return ONLY a valid JSON object without any explanations, comments, or extra for
 export function getExercisePlanSuggestPrompt(userDetails) {
     // TODO: Complete this function
 }
+
+//* Diet plan analysis
+export async function getGptResponseForDietAnalysis(prompt) {
+    try {
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                {
+                    role: "system",
+                    content:
+                        "You are a highly knowledgeable and friendly nutrition assistant. Your role is to analyze the user's diet plan, provide insights on the nutritional balance, and suggest potential improvements. Focus on aspects like fats, carbohydrates, Protein, calories, and overall health. Tailor your feedback based on dietary preferences or goals like weight loss, muscle gain, or maintaining a balanced diet."
+                },
+                {
+                    role: "user", content: prompt
+                }
+            ],
+            temperature: 0.8
+        });
+        return response;
+    }
+    catch (err) {
+        console.log("Caught error in getGptResponseForDietAnalysis() helper func due to ");
+        console.error(err);
+        return null;
+    }
+}
+
+
+export async function getDietPlanAnalysisPrompt(userDetails, dietPlan) {
+    const prompt = `
+        User details:${JSON.stringify(userDetails)}
+
+        Diet plan:${JSON.stringify(dietPlan)}
+
+        Based on my details, analyze my diet plan and provide a nutritional breakdown for each meal (breakfast, lunch, snacks, dinner). The analysis should include the following:
+        
+        - A detailed list of all food items for each meal type (breakfast, lunch, snacks, dinner).
+        - Nutritional values for each item, including fats, carbohydrates, protein, and total calories (kcal).
+        - Constructive feedback on the diet, with specific improvements suggested for each meal.
+
+        The response should be a single JSON object containing 4 attributes: 'breakfast', 'lunch', 'snacks', and 'dinner'. Each attribute should contain the following structure:
+        
+        {
+            "plan": [ // list of items related to this meal_type which is current object key
+                {
+                    "name": "name of the food item",
+                    "quantity": "quantity from the provided diet plan",
+                    "fats": "total fats in grams",
+                    "carbs": "total carbohydrates in grams",
+                    "protein": "total protein in grams",
+                    "kcal": "total calories in kcal"
+                },
+                ...
+            ],
+            "feedback": [
+                "Bullet-point feedback on the nutritional balance of the meal, including any suggested improvements."
+            ]
+        }
+
+        Return ONLY a valid JSON object without any explanations, comments, or extra formatting. Ensure the JSON is valid.
+    `
+    return prompt;
+}

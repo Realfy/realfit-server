@@ -1,11 +1,16 @@
 import { readItems } from "@directus/sdk";
+import db from "../../config/firestoreConfig.js";
 import client from "../../config/getDirectusClient.js";
 import { directusCollections } from '../../directus/collections.js';
 import { caloriesDistribution } from "../../helpers/dietCaloriesDistribution.js";
-import { getDietPlanSuggestPrompt, getGptResponse } from "../../helpers/getGptResponse.js";
-import db from "../../config/firestoreConfig.js";
-import { fireStoreCollections } from "../../utils/collection/firestore.js";
+import {
+    getDietPlanAnalysisPrompt,
+    getDietPlanSuggestPrompt,
+    getGptResponse,
+    getGptResponseForDietAnalysis
+} from "../../helpers/getGptResponse.js";
 import { validateDietPlanItem, validateDietPreferencesObject } from "../../helpers/validators.js";
+import { fireStoreCollections } from "../../utils/collection/firestore.js";
 
 // Get list of all the food products available in our CMS in ascending order of ID
 export async function getItemsListFromCMS(req, res) {
@@ -71,38 +76,75 @@ export async function getDietPlanWithCaloriesCount(req, res) {
     }
 }
 
+// get diet plan analysis with AI
+export async function getDietPlanAnalysis(req, res) {
+    try {
+        const userDetails = req.body.details;
+        if (!userDetails) {
+            return res.status(400).json({ code: 0, message: "Please provide user details." });
+        }
+        const dietPlan = req.body.plan;
+        if (!dietPlan || !Array.isArray(dietPlan)) {
+            return res.status(400).json({ code: 0, message: "Please provide valid diet plan." });
+        }
+        const prompt = await getDietPlanAnalysisPrompt(userDetails, dietPlan);
+        const response = await getGptResponseForDietAnalysis(prompt);
+        const data = [];
+        for (const element of response.choices) {
+            console.log(element.message);
+            const analysis = element.message.content
+            const analysisObject = JSON.parse(analysis);
+            data.push(analysisObject);
+        }
+        return res.status(200).json({ code: 1, message: "Your diet plan is analyzed", data: data })
+    }
+    catch (err) {
+        console.log("Caught exception in controller.diet.controller.getDietPlanAnalysis due to ");
+        console.error(err);
+        return res.status(500).json({ code: -1, message: "Failed to suggest diet plan with AI." });
+    }
+}
 
 // Suggest diet plan based on user preferences with help of AI (GPT-4o-mini).
 // TODO: Replace user details with actual data.
 export async function getDietPlanWithAI(req, res) {
-    const userDetails = {
-        userDescription: null,
-        dietaryType: "Vegan",
-        purpose: "Muscle gain",
-        caloriesGoal: 2500,
-        allergies: ["Nuts", "Curd"],
-        currentDietPlan: [] || null,
-        availableFoodItems: [] || null
+    const userDetailsBody = {
+        userDescription: req.body.userDescription || null,
+        dietaryType: req.body.dietaryType || null,
+        purpose: req.body.purpose || null,
+        caloriesGoal: req.body.caloriesGoal || null,
+        allergies: req.body.allergies || null,
+        currentDietPlan: req.body.currentDietPlan || null,
+        cuisine: req.body.cuisine || null
     };
-    const prompt = getDietPlanSuggestPrompt(userDetails);
+    const userDetails = Object.entries(userDetailsBody)
+        .reduce((acc, [key, value]) => {
+            if (value !== null) {
+                acc[key] = value;
+            }
+            return acc;
+        }, {});
+
+    const prompt = getDietPlanSuggestPrompt(userDetailsBody);
     try {
         const response = await getGptResponse(prompt);
         if (response == null)
             return res.status(400).json({ code: 0, message: "An error occurred while getting diet plan from AI." });
         const data = [];
-        for (let i = 0; i < response.choices.length; i++) {
-            const dietPlan = response.choices[i].message.content
+        for (const element of response.choices) {
+            const dietPlan = element.message.content
             const dietPlanObject = JSON.parse(dietPlan);
             data.push(dietPlanObject);
         }
         return res.status(200).json({ code: 1, data: data });
     }
     catch (err) {
-        console.log("Caught exception in controller.diet.controller.getDietPlanWithAI() due to ");
+        console.log("Caught exception in controller.diet.controller.getDietPlanWithAI due to ");
         console.error(err);
         return res.status(500).json({ code: -1, message: "Failed to suggest diet plan with AI." });
     }
 }
+
 
 // Test route to check model efficiency with variable user data
 export async function getDietPlanWithAITest(req, res) {
@@ -176,7 +218,7 @@ export async function saveCurrentDayDietPlan(req, res) {
             return res.status(400).json({ code: validateDietPlanResponse.code, message: validateDietPlanResponse.message });
         }
         const currDate = new Date();
-        const key = currDate.getFullYear() + "" + String(currDate.getMonth()+1).padStart(2, '0') + "" + String(currDate.getDate()).padStart(2, '0');
+        const key = currDate.getFullYear() + "" + String(currDate.getMonth() + 1).padStart(2, '0') + "" + String(currDate.getDate()).padStart(2, '0');
         const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
         const userDoc = await userRef.get();
         if (!userDoc.exists) {
@@ -285,7 +327,7 @@ export async function saveLatestDietPlanTemplate(req, res) {
             return res.status(404).json({ code: 0, message: 'User not found.' });
 
         const dietTemplateDoc = userRef.collection(fireStoreCollections.userData.subCollections.diet.dietTemplate.title).doc(id);
-        const saved = await dietTemplateDoc.set(data, {merge: true});
+        const saved = await dietTemplateDoc.set(data, { merge: true });
         console.log(saved)
 
         return res.status(200).json({ code: 1, message: 'Diet template saved successfully.' });
@@ -320,7 +362,7 @@ export async function getLatestDietTemplate(req, res) {
     catch (err) {
         console.log("Caught error in controller.diet.controller.getLatestDietTemplate() due to: ");
         console.error(err);
-        return res.json({code: -1, message: "Failed to get latest diet plan template."})
+        return res.json({ code: -1, message: "Failed to get latest diet plan template." })
     }
 }
 

@@ -1,5 +1,6 @@
 import express from "express";
 import {
+    getDietPlanAnalysis,
     getDietPlanList,
     getDietPlanWithAI,
     getDietPlanWithId,
@@ -11,7 +12,8 @@ import {
 
 const router = express.Router();
 
-router.get('/v1/suggest', getDietPlanWithAI);
+router.post('/v1/suggest', getDietPlanWithAI);
+router.post('/v1/analyze', getDietPlanAnalysis);
 
 router.post('/v1/current/save', saveCurrentDayDietPlan);
 router.post('/v1/template/save', saveLatestDietPlanTemplate);

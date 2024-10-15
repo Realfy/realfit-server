@@ -9,10 +9,10 @@ export async function signUserToken(req, res) {
     try {
         const { userId, email } = req.body;
         if (!userId) {
-            return res.status(401).json({code: 0, message: "Please provide user id."})
+            return res.status(400).json({code: 0, message: "Please provide user id."})
         }
         if (!email)
-            return res.status(401).json({ code: 0, message: "Please provide user email," });
+            return res.status(400).json({ code: 0, message: "Please provide user email," });
         const payload = {
             email: email,
             userId: userId

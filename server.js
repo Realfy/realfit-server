@@ -63,3 +63,8 @@ app.use('/api/user/profile', verifyTokenMiddleware, profileRouter);
 // Save user preferences
 import preferenceRouter from './router/preferenceRouter.js';
 app.use('/api/preference', verifyTokenMiddleware, preferenceRouter);
+
+
+// Chatbot test
+import chatbotRouter from './router/chatbotRouter.js';
+app.use('/api/bot', chatbotRouter);
