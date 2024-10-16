@@ -91,7 +91,6 @@ export async function getDietPlanAnalysis(req, res) {
         const response = await getGptResponseForDietAnalysis(prompt);
         const data = [];
         for (const element of response.choices) {
-            console.log(element.message);
             const analysis = element.message.content
             const analysisObject = JSON.parse(analysis);
             data.push(analysisObject);

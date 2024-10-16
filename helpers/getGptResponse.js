@@ -123,9 +123,11 @@ export async function getDietPlanAnalysisPrompt(userDetails, dietPlan) {
         
         - A detailed list of all food items for each meal type (breakfast, lunch, snacks, dinner).
         - Nutritional values for each item, including fats, carbohydrates, protein, and total calories (kcal).
-        - Constructive feedback on the diet, with specific improvements suggested for each meal.
+        - Constructive feedback for current meal type, listing only the negative aspects.
+        - At last there should be a field named 'align', which represents the overall alignment of the diet plan with the user's details. This number should indicate how closely the diet aligns with the user's requirements, with higher numbers indicating better alignment.
 
-        The response should be a single JSON object containing 4 attributes: 'breakfast', 'lunch', 'snacks', and 'dinner'. Each attribute should contain the following structure:
+
+        The response should be a single JSON object containing 4 attributes: 'breakfast', 'lunch', 'snacks', and 'dinner' and a field named 'align', which represents the overall alignment of the diet plan with the user's details. This number should indicate how closely the diet aligns with the user's requirements, with higher numbers indicating better alignment. . Each attribute should contain the following structure:
         
         {
             "plan": [ // list of items related to this meal_type which is current object key
@@ -140,8 +142,9 @@ export async function getDietPlanAnalysisPrompt(userDetails, dietPlan) {
                 ...
             ],
             "feedback": [
-                "Bullet-point feedback on the nutritional balance of the meal, including any suggested improvements."
-            ]
+                "Bullet-points. Constructive feedback for current meal type, listing only the negative aspects (i.e., where the diet is lacking or needs improvement)."
+            ],
+            "improvement_required": "Number, indicating the percentage (as a number) of how much improvement is required for that specific meal's nutritional alignment."
         }
 
         Return ONLY a valid JSON object without any explanations, comments, or extra formatting. Ensure the JSON is valid.
