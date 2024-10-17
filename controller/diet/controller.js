@@ -107,14 +107,21 @@ export async function getDietPlanAnalysis(req, res) {
 // Suggest diet plan based on user preferences with help of AI (GPT-4o-mini).
 // TODO: Replace user details with actual data.
 export async function getDietPlanWithAI(req, res) {
+    const { userDescription, dietaryType, purpose, caloriesGoal, allergies, currentDietPlan, cuisine } = req.body;
+    if (!purpose)
+        return res.status(400).json({ code: 0, message: "Please provide purpose." });
+    
+    if (!currentDietPlan || typeof currentDietPlan != 'object')
+        return res.status(400).json({ code: 0, message: "Please provide valid user's current diet plan." });
+
     const userDetailsBody = {
-        userDescription: req.body.userDescription || null,
-        dietaryType: req.body.dietaryType || null,
-        purpose: req.body.purpose || null,
-        caloriesGoal: req.body.caloriesGoal || null,
-        allergies: req.body.allergies || null,
-        currentDietPlan: req.body.currentDietPlan || null,
-        cuisine: req.body.cuisine || null
+        userDescription: userDescription || null,
+        dietaryType: dietaryType || null,
+        purpose: purpose || null,
+        caloriesGoal: caloriesGoal || null,
+        allergies: allergies || null,
+        currentDietPlan: currentDietPlan || null,
+        cuisine: cuisine || null
     };
     const userDetails = Object.entries(userDetailsBody)
         .reduce((acc, [key, value]) => {
