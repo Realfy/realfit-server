@@ -82,8 +82,60 @@ Return ONLY a valid JSON object without any explanations, comments, or extra for
 }
 
 
-export function getExercisePlanSuggestPrompt(userDetails) {
-    // TODO: Complete this function
+export async function getGptResponseForWorkoutPlan(prompt) {
+    try {
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                {
+                    role: "system", content: "You are a workout instructor."
+                },
+                {
+                    role: "user", content: prompt
+                }
+            ],
+            temperature: 0.8
+        });
+        return response;
+    }
+    catch (err) {
+        console.log("Caught error in getGptResponseForWorkoutPlan() helper func due to ");
+        console.error(err);
+        return null;
+    }
+}
+
+
+export function getExercisePlanSuggestPrompt(userDetails, cmsData) {
+    const prompt = `
+        Generate a workout plan based on the following user details:
+
+        - User details: ${JSON.stringify(userDetails)}
+        - Available exercises (cmsData): ${JSON.stringify(cmsData)} (Ensure that the exercise ID matches the IDs in this list)
+        - Parameters provided in user details:
+            - workoutDays: Number of days the user works out in a week.
+            - injuries: List of any injuries the user has or a description of user injuries.
+            - exerciseLevel: User's experience level (e.g., beginner, intermediate, advanced).
+            - workoutType: Type of workout (e.g., strength, cardio, flexibility).
+            - userWeight: User's weight in kg.
+            - userHeight: User's height in cm.
+            - equipmentLevel: Availability of equipment (e.g., none, basic, advanced, gym, home, etc.).
+
+        Based on these details, suggest a workout plan from the available list of exercises.
+
+        The response should have a list of objects where each object represents an exercise. Each object should follow this structure:
+
+        {
+            "id": "ID of the exercise from the available exercises list (should match the ID provided in cmsData)",
+            "title": "Name of the exercise from the available exercises list",
+            "sets": "Number of sets based on user experience and user details",
+            "reps": "Array of numbers. Each number represents the number of reps the user should do in each set"
+        }
+
+        Return ONLY a valid JSON object without any explanations, comments, or extra formatting. Ensure the JSON is valid.
+
+    `
+    return prompt;
 }
 
 //* Diet plan analysis
