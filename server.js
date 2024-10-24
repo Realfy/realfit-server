@@ -41,7 +41,7 @@ app.use('/api/cms/diet', dietRouter);
 
 // Diet routes for user specific
 import dietRouterUser from './router/dietRouter.js';
-import { getDietPlanWithAITest } from "./controller/diet/controller.js";
+import { getDietPlanWithAITest } from "./controller/diet/controller.js"; // TODO: Remove this part
 app.post('/api/diet/test/suggest', getDietPlanWithAITest)
 app.use('/api/diet', verifyTokenMiddleware, dietRouterUser);
 
@@ -63,3 +63,8 @@ app.use('/api/user/profile', verifyTokenMiddleware, profileRouter);
 // Save user preferences
 import preferenceRouter from './router/preferenceRouter.js';
 app.use('/api/preference', verifyTokenMiddleware, preferenceRouter);
+
+
+// Chatbot test
+import chatbotRouter from './router/chatbotRouter.js';
+app.use('/api/bot', chatbotRouter);
