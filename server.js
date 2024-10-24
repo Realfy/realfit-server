@@ -68,3 +68,7 @@ app.use('/api/preference', verifyTokenMiddleware, preferenceRouter);
 // Chatbot test
 import chatbotRouter from './router/chatbotRouter.js';
 app.use('/api/bot', chatbotRouter);
+
+// Coins routes
+import coinsRouter from './router/coinsRouter.js';
+app.use('/api/wallet', verifyTokenMiddleware, coinsRouter);

@@ -2,6 +2,10 @@ import { readItems } from "@directus/sdk";
 import client from "../../config/getDirectusClient.js";
 import { directusCollections } from "../../directus/collections.js";
 import { getExercisePlanSuggestPrompt, getGptResponseForWorkoutPlan } from "../../helpers/getGptResponse.js";
+import { revokeChargedCoinsForAI, updateTransactionAsChargedAfterAI, verifyHistoryIdExist } from "../coins/utils.js";
+// import { fireStoreCollections } from "../../utils/collection/firestore.js";
+import { coinsCharge } from "../../utils/coins/charge.js";
+
 
 // Get list of all the exercises based on target muscle group
 export async function getExercisesFromCmsBasedOnMuscleGroup(req, res) {
@@ -100,8 +104,11 @@ export async function getExerciseDataFromCmsWithFilters(request, response) {
 
 
 export async function getExercisePlanWithAI(req, res) {
+    const historyId = req.body.transactionId;
+    const coinsToCharge = coinsCharge.aiWorkoutPlan;
+    const userId = req.payload.userId;
     try {
-        const { workoutDays, injuries, exerciseLevel, workoutType, userWeight, userHeight, equipmentLevel } = req.body;
+        const { workoutDays, injuries, exerciseLevel, workoutType, userWeight, userHeight, equipmentLevel, transactionId } = req.body;
         if (!workoutDays || isNaN(workoutDays) || workoutDays < 1 || workoutDays > 7)
             return res.status(400).json({ code: 0, message: 'Please number of days user workouts in a week. This value should lie between 1 to 7.' });
         if (!exerciseLevel)
@@ -122,6 +129,13 @@ export async function getExercisePlanWithAI(req, res) {
         if (!equipmentLevel)
             return res.status(400).json({ code: 0, message: 'Please provide the level of equipment available.' });
 
+        if (!historyId)
+            return res.status(400).json({ code: 0, message: "Please provide transaction ID." });
+
+        const transactionExists = await verifyHistoryIdExist(userId, historyId);
+        if (!transactionExists)
+            return res.status(402).json({ code: 0, message: "Transaction not found or has already been used for the provided history ID." });
+
         const userDetails = {};
         userDetails.workoutDays = workoutDays
         userDetails.injuries = injuries
@@ -137,19 +151,27 @@ export async function getExercisePlanWithAI(req, res) {
         const prompt = getExercisePlanSuggestPrompt(userDetails, cmsData);
         const response = await getGptResponseForWorkoutPlan(prompt);
         if (response == null)
-            return res.status(400).json({ code: 0, message: "An error occurred while getting diet plan from AI." });
+            throw { statusCode: 400, code: 0 };
         const data = [];
         for (const element of response.choices) {
             const dietPlan = element.message.content
             const dietPlanObject = JSON.parse(dietPlan);
             data.push(dietPlanObject);
         }
+        updateTransactionAsChargedAfterAI(userId, historyId);
         return res.status(200).json({ code: 1, data: data, message: "Workout plan generated with AI." });
     }
     catch (err) {
+        let message = "Failed to get exercise plan with AI.";
+        const statusCode = err.statusCode ? err.statusCode : 500;
+        let code = err.code ? err.code : -1;
+        const revokeResponse = await revokeChargedCoinsForAI(userId, historyId, coinsToCharge);
+        if (revokeResponse.code != 1) {
+            message = "Failed to get exercise plan with AI and unable to refund the coins.";
+        }
         console.log("Caught exception in controller.exercise.getExercisePlanWithAI() due to");
-        console.log(err)
-        return res.status(500).json({ code: -1, message: "Failed to get exercise plan with AI." });
+        console.log(err);
+        return res.status(statusCode).json({ code: code, message: message });
     }
 }
 
