@@ -10,7 +10,9 @@ import {
     getGptResponseForDietAnalysis
 } from "../../helpers/getGptResponse.js";
 import { validateDietPlanItem, validateDietPreferencesObject } from "../../helpers/validators.js";
+import { coinsCharge } from "../../utils/coins/charge.js";
 import { fireStoreCollections } from "../../utils/collection/firestore.js";
+import { revokeChargedCoinsForAI, updateTransactionAsChargedAfterAI, verifyHistoryIdExist } from "../coins/utils.js";
 
 // Get list of all the food products available in our CMS in ascending order of ID
 export async function getItemsListFromCMS(req, res) {
@@ -107,12 +109,18 @@ export async function getDietPlanAnalysis(req, res) {
 // Suggest diet plan based on user preferences with help of AI (GPT-4o-mini).
 // TODO: Replace user details with actual data.
 export async function getDietPlanWithAI(req, res) {
+    const coinsToCharge = coinsCharge.aiDietPlan;
+    const userId = req.payload.userId;
+    const historyId = req.body.transactionId;
     const { userDescription, dietaryType, purpose, caloriesGoal, allergies, currentDietPlan, cuisine } = req.body;
     if (!purpose)
         return res.status(400).json({ code: 0, message: "Please provide purpose." });
-    
+
     if (!currentDietPlan || typeof currentDietPlan != 'object')
         return res.status(400).json({ code: 0, message: "Please provide valid user's current diet plan." });
+
+    if (!historyId)
+        return res.status(400).json({ code: 0, message: "Please provide transaction ID." });
 
     const userDetailsBody = {
         userDescription: userDescription || null,
@@ -123,31 +131,42 @@ export async function getDietPlanWithAI(req, res) {
         currentDietPlan: currentDietPlan || null,
         cuisine: cuisine || null
     };
-    const userDetails = Object.entries(userDetailsBody)
-        .reduce((acc, [key, value]) => {
-            if (value !== null) {
-                acc[key] = value;
-            }
-            return acc;
-        }, {});
+    // const userDetails = Object.entries(userDetailsBody)
+    //     .reduce((acc, [key, value]) => {
+    //         if (value !== null) {
+    //             acc[key] = value;
+    //         }
+    //         return acc;
+    //     }, {});
 
-    const prompt = getDietPlanSuggestPrompt(userDetailsBody);
     try {
+        const transactionExists = await verifyHistoryIdExist(userId, historyId);
+        if (!transactionExists)
+            return res.status(402).json({ code: 0, message: "Transaction not found or has already been used for the provided history ID." });
+        const prompt = getDietPlanSuggestPrompt(userDetailsBody);
         const response = await getGptResponse(prompt);
         if (response == null)
-            return res.status(400).json({ code: 0, message: "An error occurred while getting diet plan from AI." });
+            throw { statusCode: 400, code: 0 };
         const data = [];
         for (const element of response.choices) {
             const dietPlan = element.message.content
             const dietPlanObject = JSON.parse(dietPlan);
             data.push(dietPlanObject);
         }
+        updateTransactionAsChargedAfterAI(userId, historyId);
         return res.status(200).json({ code: 1, data: data });
     }
     catch (err) {
+        let message = "Failed to suggest diet plan with AI.";
+        const statusCode = err.statusCode ? err.statusCode : 500;
+        let code = err.code ? err.code : -1;
+        const revokeResponse = await revokeChargedCoinsForAI(userId, historyId, coinsToCharge);
+        if (revokeResponse.code != 1) {
+            message = "Failed to suggest diet plan with AI and unable to refund the coins.";
+        }
         console.log("Caught exception in controller.diet.controller.getDietPlanWithAI due to ");
         console.error(err);
-        return res.status(500).json({ code: -1, message: "Failed to suggest diet plan with AI." });
+        return res.status(statusCode).json({ code: code, message: message });
     }
 }
 

@@ -1,6 +1,6 @@
 import jsonwebtoken from 'jsonwebtoken';
-import { JWT_ACCESS_TOKEN_SECRET, JWT_REFRESH_TOKEN_SECRET } from '../../envConfig.js';
 import db from "../../config/firestoreConfig.js";
+import { JWT_ACCESS_TOKEN_SECRET, JWT_REFRESH_TOKEN_SECRET } from '../../envConfig.js';
 import { fireStoreCollections } from "../../utils/collection/firestore.js";
 
 export async function signUserToken(req, res) {
@@ -9,7 +9,7 @@ export async function signUserToken(req, res) {
     try {
         const { userId, email } = req.body;
         if (!userId) {
-            return res.status(400).json({code: 0, message: "Please provide user id."})
+            return res.status(400).json({ code: 0, message: "Please provide user id." })
         }
         if (!email)
             return res.status(400).json({ code: 0, message: "Please provide user email," });
@@ -21,7 +21,10 @@ export async function signUserToken(req, res) {
         const userDoc = await userRef.get();
         if (!userDoc.exists) {
             await userRef.set({
-                email: email
+                email: email,
+                coins: {
+                    available: 0
+                }
             });
         }
         const accessToken = sign(payload, JWT_ACCESS_TOKEN_SECRET, {

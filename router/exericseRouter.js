@@ -3,6 +3,6 @@ import { getExercisePlanWithAI } from '../controller/exercise/controller.js';
 
 const router = express.Router();
 
-router.post('/plan', getExercisePlanWithAI);
+router.post('/v1/plan', getExercisePlanWithAI);
 
 export default router;
