@@ -22,3 +22,7 @@ export const JWT_REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_TOKEN_SECRET;
 
 // OpenAI Key
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+// Referral coupons fields
+export const REFERRAL_LIMIT = process.env.REFERRAL_LIMIT;
+export const REFERRAL_COINS = process.env.REFERRAL_COINS;

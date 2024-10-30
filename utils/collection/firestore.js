@@ -44,10 +44,14 @@ export const fireStoreCollections = {
             description: '',
         },
         subCollections: {
-            redeemedBy: [{
-                userId: 'id',
-                redeemedAt: 'Time of redemption'
-            }]
+            redeemedBy: {
+                title: 'redeemed_by',
+                fields: {
+                    id: "PK",
+                    userId: "Redeemed user's id",
+                    date: "Date of redeemed"
+                }
+            }
         }
     }
 }

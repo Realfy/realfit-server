@@ -5,7 +5,6 @@ import { fireStoreCollections } from "../../utils/collection/firestore.js";
 
 export async function signUserToken(req, res) {
     const { sign } = jsonwebtoken;
-
     try {
         const { userId, email } = req.body;
         if (!userId) {
@@ -13,19 +12,31 @@ export async function signUserToken(req, res) {
         }
         if (!email)
             return res.status(400).json({ code: 0, message: "Please provide user email," });
-        const payload = {
-            email: email,
-            userId: userId
-        }
         const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
         const userDoc = await userRef.get();
+        let userRole = 'user';
         if (!userDoc.exists) {
             await userRef.set({
                 email: email,
+                role: userRole,
                 coins: {
                     available: 0
                 }
             });
+        }
+        if (userDoc.exists) {
+            if (!userDoc.data().role) {
+                await userRef.update({
+                    role: userRole
+                });
+            }
+            else
+                userRole = userDoc.data().role || userRole;
+        }
+        const payload = {
+            email: email,
+            userId: userId,
+            role: userRole
         }
         const accessToken = sign(payload, JWT_ACCESS_TOKEN_SECRET, {
             expiresIn: "1h"

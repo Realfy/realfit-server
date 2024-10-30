@@ -1,6 +1,6 @@
-import { getRefreshTokenFromCookie } from "../utils/cookies/cookieUtils.js";
 import jsonwebtoken from 'jsonwebtoken';
-import { JWT_REFRESH_TOKEN_SECRET, JWT_ACCESS_TOKEN_SECRET } from '../envConfig.js';
+import { JWT_ACCESS_TOKEN_SECRET, JWT_REFRESH_TOKEN_SECRET } from '../envConfig.js';
+import { getRefreshTokenFromCookie } from "../utils/cookies/cookieUtils.js";
 
 export async function verifyToken(req, res, next) {
     const { verify, sign } = jsonwebtoken;
@@ -23,18 +23,18 @@ export async function verifyToken(req, res, next) {
                     if (error) {
                         return res.status(401).json({ code: -2, message: "Invalid token." });
                     }
-                    const { userId, email } = decoded;
-                    const new_access_token = sign({userId, email}, JWT_ACCESS_TOKEN_SECRET, {
+                    const { userId, email, role } = decoded;
+                    const new_access_token = sign({ userId, email, role }, JWT_ACCESS_TOKEN_SECRET, {
                         expiresIn: "1h"
                     });
                     req.headers["authorization"] = "Bearer " + new_access_token;
                     res.setHeader('x-access-token', "Bearer " + new_access_token); // else send it in Http-Only cookie
-                    req.payload = {userId, email};
+                    req.payload = { userId, email, role };
                     next();
                 });
             } else {
-                const { email, userId } = payload;
-                req.payload = {email, userId};
+                const { email, userId, role } = payload;
+                req.payload = { email, userId, role };
                 next();
             }
         });

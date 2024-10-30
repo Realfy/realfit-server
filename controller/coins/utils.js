@@ -16,12 +16,16 @@ export async function redeemOpeningCoupon() {
 
 export async function chargeCoinsForAI(userId, date_data, coins, reason, description, relatedId, in_or_out) {
     try {
+        if (typeof coins === 'string')
+            coins = parseInt(coins);
         const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
         const userDoc = await userRef.get();
         if (userDoc.exists) {
             const userData = userDoc.data();
-            if (userData.coins && !isNaN(userData.coins.available)) {
-                const availableCoins = userData.coins.available;
+            let availableCoins = userData.coins.available;
+            if (userData.coins && !isNaN(availableCoins)) {
+                if (typeof availableCoins === 'string')
+                    availableCoins = parseInt(availableCoins);
                 if (availableCoins >= coins) {
                     const updatedCoins = availableCoins - coins;
                     const coinsHistoryRef = userRef.collection(fireStoreCollections.userData.subCollections.coinsHistory.title);
@@ -68,11 +72,14 @@ export async function revokeChargedCoinsForAI(userId, historyId, coinsToRefund) 
         const coinsHistoryRefIsExist = userRef.collection(fireStoreCollections.userData.subCollections.coinsHistory.title).doc(historyId + "_refund");
         const coinsHistoryDocIsExist = await coinsHistoryRefIsExist.get();
         if (coinsHistoryDocIsExist.exists)
-            return { code: 1, message: "Successfully refunded ${coinsToRefund} coins and removed the transaction." }
+            return { code: 1, message: `Successfully refunded ${coinsToRefund} coins and removed the transaction.` }
         const userDoc = await userRef.get();
         if (userDoc.exists) {
             const userData = userDoc.data();
-            const availableCoins = userData.coins ? userData.coins.available : 0;
+            let availableCoins = userData.coins ? userData.coins.available : 0;
+            if (typeof availableCoins === 'string')
+                availableCoins = parseInt(availableCoins);
+
             const coinsHistoryRef = userRef.collection(fireStoreCollections.userData.subCollections.coinsHistory.title);
             await db.runTransaction(async (t) => {
                 const updatedCoins = availableCoins + coinsToRefund;
@@ -164,4 +171,33 @@ export async function getCoinsTransactionListUtil(userId, limit=10, offset=0) {
         console.error(err);
         return {status: 5200, code: -1, message: "Failed to get transaction list. Please try again!"}
     }
+}
+
+
+
+export function generateReferralCoupon(userId) {
+    // Generate a random uppercase letter (from ASCII 65 to 90)
+    const randomLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+
+    // Get the last 5 characters of the userId
+    const lastFive = userId.slice(-5);
+
+    // Generate a random 3-digit number (from 100 to 999)
+    const randomNumber = Math.floor(100 + Math.random() * 900);
+
+    return `${randomLetter}${lastFive}${randomNumber}`.toUpperCase();
+}
+
+
+export function generateTransactionId() {
+    const created_at = new Date();
+    const timestamp = created_at.getFullYear().toString() +
+        (created_at.getMonth() + 1).toString().padStart(2, '0') +
+        created_at.getDate().toString().padStart(2, '0') +
+        created_at.getHours().toString().padStart(2, '0') +
+        created_at.getMinutes().toString().padStart(2, '0') +
+        created_at.getSeconds().toString().padStart(2, '0');
+    const randomComponent = Buffer.from(Math.floor(Math.random() * 1000000).toString().padStart(6, '0').toString()).toString('base64');
+    const historyId = `TXN-${timestamp}-${randomComponent}`;
+    return historyId;
 }
