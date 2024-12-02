@@ -27,6 +27,11 @@ app.listen(port, () => {
 });
 
 // Test route
+app.get('/', async (req, res) => {
+    res.send("Realfy Server is running");
+});
+
+// Test route
 app.post('/', async (req, res) => {
     const result = await client.request(readItems('item', {
         fields: ['*', { images: ['directus_files_id'] }]
