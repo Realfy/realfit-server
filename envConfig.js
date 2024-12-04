@@ -3,9 +3,10 @@ import dotenv from "dotenv";
 const developmentEnvironment = true;
 
 if(developmentEnvironment)
-    dotenv.config({ path: ".env.development" });
+    dotenv.config({ path: ".env" });
 else
     dotenv.config({ path: ".env.production" });
+
 
 export const DIRECTUS_API = process.env.DIRECTUS_API;
 export const DIRECTUS_ADMIN_EMAIL = process.env.DIRECTUS_ADMIN_EMAIL;
