@@ -67,63 +67,67 @@ export async function verifyToken(req, res) {
 }
 
 export async function addCoinsToUser(req, res) {
-	console.log("Received request to add coins.");
-	try {
-		const { email } = req.body;
-        const {coins} = req.body;
+    console.log("Received request to add coins.");
+    try {
+        const { email, coins } = req.body;
 
-        const availabe = coins.available;
-        console.log(coins.available)
-		// Validate email input
-		if (!email) {
-			return res
-				.status(400)
-				.json({ code: 0, message: "Email is required." });
-		}
+        if (!email) {
+            return res.status(400).json({ code: 0, message: "Email is required." });
+        }
+        if (!coins || coins.available === undefined) {
+            return res.status(400).json({ code: 0, message: "Coins data is required." });
+        }
 
-		// Get the collection reference
-		const userCollection = db.collection(
-			fireStoreCollections.userData.title
-		);
+        const emailNormalized = email.trim().toLowerCase();
+        const availableCoins = coins.available;
 
-		// Query for the user document by email
-		const querySnapshot = await userCollection
-			.where("email", "==", email)
-			.get();
+        console.log(`Normalized email: "${emailNormalized}"`);
+        console.log(`Available coins: ${availableCoins}`);
 
-		// Check if the user exists
-		if (querySnapshot.empty) {
-			console.log("No user found with the specified email.");
-			return res
-				.status(404)
-				.json({ code: 0, message: "User not found." });
-		}
+        const userCollection = db.collection(fireStoreCollections.userData.title);
 
-		// Update the user's coins field
-		const updates = querySnapshot.docs.map(async (doc) => {
-			const userRef = userCollection.doc(doc.id);
-			await userRef.update({
-                "coins.available": availabe,   
-			});
-			console.log(`Coins added for user: ${email}`);
-		});
+        // Log all documents for debugging
+        const allDocs = await userCollection.get();
+        console.log("All users in the collection:");
+        allDocs.forEach((doc) => {
+            console.log(`Document ID: ${doc.id}, Email: "${doc.data().email}"`);
+        });
 
-		// Wait for all updates to complete
-		await Promise.all(updates);
+        // Query for the specific email
+        const querySnapshot = await userCollection
+            .where("email", "==", emailNormalized)
+            .get();
 
-		return res
-			.status(200)
-			.json({
-				code: 1,
-				message: "Coins added successfully to the user.",
-			});
-	} catch (error) {
-		console.error("Error adding coins field:", error);
-		return res
-			.status(500)
-			.json({
-				code: -1,
-				message: "Failed to add coins. Please try again.",
-			});
-	}
+        if (querySnapshot.empty) {
+            console.log(`No user found with email: "${emailNormalized}"`);
+            return res.status(404).json({ code: 0, message: "User not found." });
+        }
+
+        // Update the user's coins
+        const updates = querySnapshot.docs.map(async (doc) => {
+            const userRef = userCollection.doc(doc.id);
+            const currentData = doc.data();
+
+            console.log(`Existing user data: ${JSON.stringify(currentData)}`);
+
+            await userRef.update({
+                "coins.available": availableCoins,
+            });
+
+            console.log(`Coins updated for user: "${emailNormalized}"`);
+        });
+
+        await Promise.all(updates);
+
+        return res.status(200).json({
+            code: 1,
+            message: "Coins added successfully to the user.",
+        });
+    } catch (error) {
+        console.error("Error adding coins field:", error);
+        return res.status(500).json({
+            code: -1,
+            message: "Failed to add coins. Please try again.",
+        });
+    }
 }
