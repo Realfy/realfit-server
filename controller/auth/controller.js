@@ -79,19 +79,12 @@ export async function addCoinsToUser(req, res) {
         }
 
         const emailNormalized = email.trim().toLowerCase();
-        const availableCoins = coins.available;
+        const additionalCoins = coins.available;
 
         console.log(`Normalized email: "${emailNormalized}"`);
-        console.log(`Available coins: ${availableCoins}`);
+        console.log(`Additional coins to add: ${additionalCoins}`);
 
         const userCollection = db.collection(fireStoreCollections.userData.title);
-
-        // Log all documents for debugging
-        const allDocs = await userCollection.get();
-        console.log("All users in the collection:");
-        allDocs.forEach((doc) => {
-            console.log(`Document ID: ${doc.id}, Email: "${doc.data().email}"`);
-        });
 
         // Query for the specific email
         const querySnapshot = await userCollection
@@ -107,14 +100,16 @@ export async function addCoinsToUser(req, res) {
         const updates = querySnapshot.docs.map(async (doc) => {
             const userRef = userCollection.doc(doc.id);
             const currentData = doc.data();
+            const currentCoins = currentData.coins?.available || 0;
 
-            console.log(`Existing user data: ${JSON.stringify(currentData)}`);
+            console.log(`Existing coins: ${currentCoins}`);
 
+            const newCoinTotal = currentCoins + additionalCoins;
             await userRef.update({
-                "coins.available": availableCoins,
+                "coins.available": newCoinTotal,
             });
 
-            console.log(`Coins updated for user: "${emailNormalized}"`);
+            console.log(`Coins updated for user: "${emailNormalized}" with new total: ${newCoinTotal}`);
         });
 
         await Promise.all(updates);
