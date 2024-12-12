@@ -7,6 +7,7 @@ import { revokeChargedCoinsForAI, updateTransactionAsChargedAfterAI, verifyHisto
 import { coinsCharge } from "../../utils/coins/charge.js";
 
 
+
 // Get list of all the exercises based on target muscle group
 export async function getExercisesFromCmsBasedOnMuscleGroup(req, res) {
     try {
