@@ -45,6 +45,7 @@ export async function signUserToken(req, res) {
 		const data = {
 			accessToken: accessToken,
 			refreshToken,
+			userId: userId,
 		};
 		return res
 			.status(200)

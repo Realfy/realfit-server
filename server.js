@@ -7,6 +7,7 @@ import { readItems } from "@directus/sdk";
 import { PORT } from "./envConfig.js";
 import cookieParser from "cookie-parser";
 import { verifyToken as verifyTokenMiddleware } from './middleware/verifyToken.js';
+import chatRoutes from './router/chatRoutes.js';
 
 
 // Create Express app
@@ -81,3 +82,7 @@ app.use('/api/bot', chatbotRouter);
 // Coins routes
 import coinsRouter from './router/coinsRouter.js';
 app.use('/api/wallet', verifyTokenMiddleware, coinsRouter);
+
+
+//chatbot sridhar
+app.use('/api/chat', chatRoutes);
