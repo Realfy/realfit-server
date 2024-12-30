@@ -6,7 +6,7 @@ export async function updateUserProfileDetails(req, res) {
         let user_id = req.payload.userId;
         if (!isNaN(user_id))
             user_id = "" + user_id;
-        const { gender, age, height, goal, target_weight, current_weight, medical } = req.body;
+        const { gender, age, height, goal, target_weight, current_weight, medical, calories_intake } = req.body;
         if (!user_id || user_id.length == 0)
             return res.status(400).json({ code: 0, message: "Please provide valid user id" });
         const userRef = db.collection(fireStoreCollections.userData.title).doc(user_id);
@@ -18,7 +18,8 @@ export async function updateUserProfileDetails(req, res) {
         if (target_weight) user_data.target_weight = target_weight;
         if (current_weight) user_data.current_weight = current_weight;
         if (medical) user_data.medical = medical;
-        if(caloriesIntake) user_data.caloriesIntake = caloriesIntake
+        if (calories_intake) user_data.calories_intake = calories_intake;
+        
         await userRef
             .collection(fireStoreCollections.userData.subCollections.profile.title).doc(user_id + "_profile")
             .set(user_data, { merge: true });
