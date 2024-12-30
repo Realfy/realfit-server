@@ -26,6 +26,10 @@ const port = PORT || 5431;
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
+// Test route
+app.get('/', async (req, res) => {
+    res.send("Realfy Server is running");
+});
 
 // Test route
 app.get('/', async (req, res) => {
@@ -78,6 +82,7 @@ app.use('/api/bot', chatbotRouter);
 // Coins routes
 import coinsRouter from './router/coinsRouter.js';
 app.use('/api/wallet', verifyTokenMiddleware, coinsRouter);
+
 
 //chatbot sridhar
 app.use('/api/chat', chatRoutes);
