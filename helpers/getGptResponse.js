@@ -63,8 +63,9 @@ Response structure:
     "dinner": number
   }
 - "currentDiet": [list of possible food items for breakfast, lunch, snacks, and dinner], with adjusted quantities and item details. Decrease or increase quantities if needed, and adjust calories and other information accordingly.
-- "recommended": [list of possible food items for breakfast, lunch, snacks, and dinner]. Return an empty array if there are no items to recommend. Recommend food items that are similar to current diet food items as they should be available to user.
-- "substitute": [list of food items that can be substituted for which item from the current diet]. Return an empty array if there are no items to substitute.
+- "recommended": [list of possible food items for breakfast, lunch, snacks, and dinner].
+Always recommend something better but not too much different from current diet food items. Recommend food items that are similar to current diet food items as they should be available to user.
+- "substitute": [list of food items that can be substituted for which item from the current diet].Always give a reason for the substitution.
 
 The substitute array should have the following structure:
 - "substitute": [
