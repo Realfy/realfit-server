@@ -52,25 +52,21 @@ export async function getItemsListFromCMS(req, res) {
 				sort: ["meal_type", "id"], // Keep `-` before field for descending order
 			})
 		);
-		return res
-			.status(200)
-			.json({
-				code: 1,
-				data: itemsList,
-				message: "Diet items list fetched successfully",
-			});
+		return res.status(200).json({
+			code: 1,
+			data: itemsList,
+			message: "Diet items list fetched successfully",
+		});
 	} catch (err) {
 		console.log(err);
 		console.log(
 			"Caught exception in controller.diet.getItemsListFromCMS() due to " +
 				err
 		);
-		return res
-			.status(500)
-			.json({
-				code: -1,
-				message: "Failed to get list of items from CMS",
-			});
+		return res.status(500).json({
+			code: -1,
+			message: "Failed to get list of items from CMS",
+		});
 	}
 }
 
@@ -132,13 +128,11 @@ export async function getDietPlanWithCaloriesCount(req, res) {
 				}
 			}
 		});
-		return res
-			.status(200)
-			.json({
-				code: 1,
-				data: result,
-				message: "Diet planed successfully.",
-			});
+		return res.status(200).json({
+			code: 1,
+			data: result,
+			message: "Diet planed successfully.",
+		});
 	} catch (err) {
 		console.log(
 			"Caught exception in controller.diet.getDietPlanWithCaloriesCount() due to "
@@ -173,24 +167,20 @@ export async function getDietPlanAnalysis(req, res) {
 			const analysisObject = JSON.parse(analysis);
 			data.push(analysisObject);
 		}
-		return res
-			.status(200)
-			.json({
-				code: 1,
-				message: "Your diet plan is analyzed",
-				data: data,
-			});
+		return res.status(200).json({
+			code: 1,
+			message: "Your diet plan is analyzed",
+			data: data,
+		});
 	} catch (err) {
 		console.log(
 			"Caught exception in controller.diet.controller.getDietPlanAnalysis due to "
 		);
 		console.error(err);
-		return res
-			.status(500)
-			.json({
-				code: -1,
-				message: "Failed to suggest diet plan with AI.",
-			});
+		return res.status(500).json({
+			code: -1,
+			message: "Failed to suggest diet plan with AI.",
+		});
 	}
 }
 
@@ -199,7 +189,7 @@ export async function getDietPlanAnalysis(req, res) {
 export async function getDietPlanWithAI(req, res) {
 	const coinsToCharge = coinsCharge.aiDietPlan;
 	const userId = req.payload.userId;
-	// const historyId = req.body.transactionId; // Commenting out the transaction ID
+	const historyId = req.body.transactionId; // Commenting out the transaction ID
 	const {
 		userDescription,
 		dietaryType,
@@ -216,16 +206,15 @@ export async function getDietPlanWithAI(req, res) {
 			.json({ code: 0, message: "Please provide purpose." });
 
 	if (!currentDietPlan || typeof currentDietPlan != "object")
+		return res.status(400).json({
+			code: 0,
+			message: "Please provide valid user's current diet plan.",
+		});
+
+	if (!historyId)
 		return res
 			.status(400)
-			.json({
-				code: 0,
-				message: "Please provide valid user's current diet plan.",
-			});
-
-	// Commenting out the check for transactionId
-	// if (!historyId)
-	//     return res.status(400).json({ code: 0, message: "Please provide transaction ID." });
+			.json({ code: 0, message: "Please provide transaction ID." });
 
 	const userDetailsBody = {
 		userDescription: userDescription || null,
@@ -301,13 +290,10 @@ export async function getDietPlanWithAITest(req, res) {
 	try {
 		const response = await getGptResponse(prompt);
 		if (response == null)
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message:
-						"An error occurred while getting diet plan from AI.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message: "An error occurred while getting diet plan from AI.",
+			});
 		const data = [];
 		for (let i = 0; i < response.choices.length; i++) {
 			const dietPlan = response.choices[i].message.content;
@@ -320,12 +306,10 @@ export async function getDietPlanWithAITest(req, res) {
 			"Caught exception in controller.diet.controller.getDietPlanWithAITest due to "
 		);
 		console.error(err);
-		return res
-			.status(500)
-			.json({
-				code: -1,
-				message: "Failed to suggest diet plan with AI.",
-			});
+		return res.status(500).json({
+			code: -1,
+			message: "Failed to suggest diet plan with AI.",
+		});
 	}
 }
 
@@ -353,24 +337,19 @@ export async function saveCurrentDayDietPlan(req, res) {
 
 		// Validate template_id
 		if (!template_id || template_id.length == 0) {
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message:
-						"Please provide valid template id for current diet.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message: "Please provide valid template id for current diet.",
+			});
 		}
 
 		// Validate diet plan objects
 		const validateDietPlanResponse = validateDietPlanItem(plan);
 		if (validateDietPlanResponse.code != 1) {
-			return res
-				.status(400)
-				.json({
-					code: validateDietPlanResponse.code,
-					message: validateDietPlanResponse.message,
-				});
+			return res.status(400).json({
+				code: validateDietPlanResponse.code,
+				message: validateDietPlanResponse.message,
+			});
 		}
 		const currDate = new Date();
 		const key =
@@ -429,95 +408,77 @@ export async function saveLatestDietPlanTemplate(req, res) {
 
 		// Validate request body
 		if (!source || !plan || !id || !preferences) {
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message: "Source, diet plan, and id fields are required.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message: "Source, diet plan, and id fields are required.",
+			});
 		}
 
 		// Validate source object
 		if (!source || typeof source !== "object") {
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message:
-						"Source must be an object with `by` (required) and `data` fields.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message:
+					"Source must be an object with `by` (required) and `data` fields.",
+			});
 		}
 
 		if (!source.by) {
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message: "Source object should contain `by` field.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message: "Source object should contain `by` field.",
+			});
 		}
 
 		if (!SOURCE_BY.includes(source.by)) {
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message: `Invalid source.by value. Must be one of: ${SOURCE_BY.join(
-						", "
-					)}`,
-				});
+			return res.status(400).json({
+				code: 0,
+				message: `Invalid source.by value. Must be one of: ${SOURCE_BY.join(
+					", "
+				)}`,
+			});
 		}
 
 		if (source.by === "expert" && !source.data) {
 			// TODO: Validate data filed incase of expert that to add expert id, template_id (incase of global), etc.. (Discuss with Jayanth)
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message:
-						"In case of plan suggested by expert, their data must be provided.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message:
+					"In case of plan suggested by expert, their data must be provided.",
+			});
 		}
 
 		// Validate plan
 		if (!Array.isArray(plan) || plan.length === 0) {
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message: "Please provide a valid non-empty diet plan.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message: "Please provide a valid non-empty diet plan.",
+			});
 		}
 
 		// Validate diet plan items
 		const validateDietPlanResponse = validateDietPlanItem(plan);
 		if (validateDietPlanResponse.code !== 1) {
-			return res
-				.status(400)
-				.json({
-					code: validateDietPlanResponse.code,
-					message: validateDietPlanResponse.message,
-				});
+			return res.status(400).json({
+				code: validateDietPlanResponse.code,
+				message: validateDietPlanResponse.message,
+			});
 		}
 
 		//* validate preferences
 		if (!preferences || typeof preferences !== "object") {
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message: "Please provide a valid non-empty preferences.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message: "Please provide a valid non-empty preferences.",
+			});
 		}
 		let { dietary_type, cuisine, allergies } = preferences;
 		if (!dietary_type && !allergies && !cuisine) {
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message:
-						"Please provide at least one of the following: dietary type, allergies, or current diet preferences.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message:
+					"Please provide at least one of the following: dietary type, allergies, or current diet preferences.",
+			});
 		}
 		if (typeof dietary_type === "string")
 			dietary_type = dietary_type.toLowerCase();
@@ -528,12 +489,10 @@ export async function saveLatestDietPlanTemplate(req, res) {
 				cuisine: cuisine,
 			});
 		if (validateDietPreferencesObjectResponse.code != 1)
-			return res
-				.status(400)
-				.json({
-					code: validateDietPreferencesObjectResponse.code,
-					message: validateDietPreferencesObjectResponse.message,
-				});
+			return res.status(400).json({
+				code: validateDietPreferencesObjectResponse.code,
+				message: validateDietPreferencesObjectResponse.message,
+			});
 
 		// Validate dates
 		if (updated_at && isNaN(Date.parse(updated_at))) {
@@ -543,13 +502,11 @@ export async function saveLatestDietPlanTemplate(req, res) {
 		}
 
 		if (updated_at && !created_at) {
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message:
-						"Please provide created_at date incase of update_at field is mentioned.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message:
+					"Please provide created_at date incase of update_at field is mentioned.",
+			});
 		}
 
 		if (created_at && isNaN(Date.parse(created_at))) {
@@ -621,13 +578,11 @@ export async function getLatestDietTemplate(req, res) {
 			.get();
 		if (!latestDoc.empty) {
 			const docData = latestDoc.docs[0].data();
-			return res
-				.status(200)
-				.json({
-					code: 1,
-					message: "Returned recently updated diet plan template.",
-					data: docData,
-				});
+			return res.status(200).json({
+				code: 1,
+				message: "Returned recently updated diet plan template.",
+				data: docData,
+			});
 		}
 		return res
 			.status(404)
@@ -648,12 +603,10 @@ export async function getTemplateById(req, res) {
 	try {
 		const id = req.params.id;
 		if (!id)
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message: "Please provide valid template id.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message: "Please provide valid template id.",
+			});
 		let userId = req.payload.userId;
 		if (!isNaN(userId)) userId = "" + userId;
 		const userRef = db
@@ -674,13 +627,11 @@ export async function getTemplateById(req, res) {
 			.get();
 		if (templateDoc.exists) {
 			const templateData = templateDoc.data();
-			return res
-				.status(200)
-				.json({
-					code: 1,
-					message: "Returned requested template.",
-					data: templateData,
-				});
+			return res.status(200).json({
+				code: 1,
+				message: "Returned requested template.",
+				data: templateData,
+			});
 		}
 		return res.status(404).json({ code: 0, message: "No template found." });
 	} catch (err) {
@@ -701,12 +652,10 @@ export async function getDietPlanWithId(req, res) {
 		if (!isNaN(userId)) userId = "" + userId;
 		const id = req.params.id || null;
 		if (!id) {
-			return res
-				.status(400)
-				.json({
-					code: 0,
-					message: "Please provide valid diet plan ID.",
-				});
+			return res.status(400).json({
+				code: 0,
+				message: "Please provide valid diet plan ID.",
+			});
 		}
 		const userRef = db
 			.collection(fireStoreCollections.userData.title)
@@ -726,20 +675,16 @@ export async function getDietPlanWithId(req, res) {
 			.get();
 		if (dietPlanDoc.exists) {
 			const docData = dietPlanDoc.data();
-			return res
-				.status(200)
-				.json({
-					code: 1,
-					message: "Returned diet plan with given ID.",
-					data: docData,
-				});
-		}
-		return res
-			.status(404)
-			.json({
-				code: 0,
-				message: "No diet plan found with the given ID.",
+			return res.status(200).json({
+				code: 1,
+				message: "Returned diet plan with given ID.",
+				data: docData,
 			});
+		}
+		return res.status(404).json({
+			code: 0,
+			message: "No diet plan found with the given ID.",
+		});
 	} catch (err) {
 		console.log(
 			"Caught error in controller.diet.controller.getDietPlanWithId() due to: "
@@ -785,13 +730,11 @@ export async function getDietPlanList(req, res) {
 				id: doc.id,
 				...doc.data(),
 			}));
-			return res
-				.status(200)
-				.json({
-					code: 1,
-					message: "Returned diet plan list",
-					data: docData,
-				});
+			return res.status(200).json({
+				code: 1,
+				message: "Returned diet plan list",
+				data: docData,
+			});
 		}
 		return res
 			.status(404)

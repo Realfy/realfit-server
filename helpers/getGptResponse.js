@@ -1,32 +1,31 @@
 import openai from "../config/openaiClient.js";
 
-
 export async function getGptResponse(prompt) {
-    try {
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                {
-                    role: "system", content: "You are a nutrition assistant."
-                },
-                {
-                    role: "user", content: prompt
-                }
-            ],
-            temperature: 0.8
-        });
-        return response;
-    }
-    catch (err) {
-        console.log("Caught error in getGptResponse() helper func due to ");
-        console.error(err);
-        return null;
-    }
+	try {
+		const response = await openai.chat.completions.create({
+			model: "gpt-4o-mini",
+			messages: [
+				{
+					role: "system",
+					content: "You are a nutrition assistant.",
+				},
+				{
+					role: "user",
+					content: prompt,
+				},
+			],
+			temperature: 0.8,
+		});
+		return response;
+	} catch (err) {
+		console.log("Caught error in getGptResponse() helper func due to ");
+		console.error(err);
+		return null;
+	}
 }
 
-
 export function getDietPlanSuggestPrompt(userDetails) {
-    const prompt = `
+	const prompt = `
     User details: ${JSON.stringify(userDetails)}
 
 Based on the above user details, suggest a diet plan for breakfast, lunch, snacks, and dinner for each of the below conditions:
@@ -55,64 +54,79 @@ In the list of recommended food items, mention the items based on different sect
       - Item 2
   - Similarly for lunch, snacks, and dinner.
 
+
+  In the list of substitue food items, mention the items based on different sections like breakfast, lunch, snacks, dinner ,pre_workout and post_workout:
+
+  caloriesToTake shuld be the total calories the user should take in a day.
 Response structure:
 - "caloriesToTake": {
     "breakfast": number,
     "lunch": number,
     "snacks": number,
-    "dinner": number
+    "dinner": number,
+    "post_workout": number,
+    "pre_workout": number
   }
-- "currentDiet": [list of possible food items for breakfast, lunch, snacks, and dinner], with adjusted quantities and item details. Decrease or increase quantities if needed, and adjust calories and other information accordingly.
-- "recommended": [list of possible food items for breakfast, lunch, snacks, and dinner].
-Always recommend something better but not too much different from current diet food items. Recommend food items that are similar to current diet food items as they should be available to user.
-- "substitute": [list of food items that can be substituted for which item from the current diet].Always give a reason for the substitution.
 
-The substitute array should have the following structure:
-- "substitute": [
-  {
+- "recommended": [changes in the current diet with a list of food items for breakfast, lunch, snacks, dinner , post_workout and pre_workout]..with changes in quantity of food items according to their calories and diet plan and very little changes in the making of the recipe and food items 
+Always recommend changes in quantity of food items according to their calories and diet plan
+in recommend donot change the food items just change the quantity and little changes in the making of the recipe according to their goals its important that the food items are not changed.
+
+
+- "substitute": {list of food items that can be substituted for which item from the current diet}.Always give a reason for the substitution.
+
+The substitute array should have the following structure Note there always be a substitute for each item we have to give more healthy substitutes always go for healthy substitutes:
+- "substitute": [follow the same structure as the recommended array and ensure each meal type is mentioned as the meal type for which the item is being replaced like recommended array
+the i want each meal type having an array of objects with the following structure
+]
+[
     "currentItem": {details of the item from the current diet that needs to be replaced},
-    "substituteItem": {details of the item that can be substituted. If there is no substitution, keep it null},
+    
+    "substituteItem": {details of the item that can be substituted. If there is no substitution, say "no substitution" with the meal type },
     "reason": "reason for removing that item"
-  }
+]
 ]
 
 Return ONLY a valid JSON object without any explanations, comments, or extra formatting. Ensure the JSON is valid.
 `;
 
-    return prompt;
+	return prompt;
 }
-
 
 export async function getGptResponseForWorkoutPlan(prompt) {
-    try {
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                {
-                    role: "system", content: "You are a workout instructor."
-                },
-                {
-                    role: "user", content: prompt
-                }
-            ],
-            temperature: 0.8
-        });
-        return response;
-    }
-    catch (err) {
-        console.log("Caught error in getGptResponseForWorkoutPlan() helper func due to ");
-        console.error(err);
-        return null;
-    }
+	try {
+		const response = await openai.chat.completions.create({
+			model: "gpt-4o-mini",
+			messages: [
+				{
+					role: "system",
+					content: "You are a workout instructor.",
+				},
+				{
+					role: "user",
+					content: prompt,
+				},
+			],
+			temperature: 0.8,
+		});
+		return response;
+	} catch (err) {
+		console.log(
+			"Caught error in getGptResponseForWorkoutPlan() helper func due to "
+		);
+		console.error(err);
+		return null;
+	}
 }
 
-
 export function getExercisePlanSuggestPrompt(userDetails, cmsData) {
-    const prompt = `
+	const prompt = `
         Generate a workout plan based on the following user details:
 
         - User details: ${JSON.stringify(userDetails)}
-        - Available exercises (cmsData): ${JSON.stringify(cmsData)} (Ensure that the exercise ID matches the IDs in this list)
+        - Available exercises (cmsData): ${JSON.stringify(
+			cmsData
+		)} (Ensure that the exercise ID matches the IDs in this list)
         - Parameters provided in user details:
             - workoutDays: Number of days the user works out in a week.
             - injuries: List of any injuries the user has or a description of user injuries.
@@ -135,39 +149,40 @@ export function getExercisePlanSuggestPrompt(userDetails, cmsData) {
 
         Return ONLY a valid JSON object without any explanations, comments, or extra formatting. Ensure the JSON is valid.
 
-    `
-    return prompt;
+    `;
+	return prompt;
 }
 
 //* Diet plan analysis
 export async function getGptResponseForDietAnalysis(prompt) {
-    try {
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                {
-                    role: "system",
-                    content:
-                        "You are a highly knowledgeable and friendly nutrition assistant. Your role is to analyze the user's diet plan, provide insights on the nutritional balance, and suggest potential improvements. Focus on aspects like fats, carbohydrates, Protein, calories, and overall health. Tailor your feedback based on dietary preferences or goals like weight loss, muscle gain, or maintaining a balanced diet."
-                },
-                {
-                    role: "user", content: prompt
-                }
-            ],
-            temperature: 0.8
-        });
-        return response;
-    }
-    catch (err) {
-        console.log("Caught error in getGptResponseForDietAnalysis() helper func due to ");
-        console.error(err);
-        return null;
-    }
+	try {
+		const response = await openai.chat.completions.create({
+			model: "gpt-4o-mini",
+			messages: [
+				{
+					role: "system",
+					content:
+						"You are a highly knowledgeable and friendly nutrition assistant. Your role is to analyze the user's diet plan, provide insights on the nutritional balance, and suggest potential improvements. Focus on aspects like fats, carbohydrates, Protein, calories, and overall health. Tailor your feedback based on dietary preferences or goals like weight loss, muscle gain, or maintaining a balanced diet.",
+				},
+				{
+					role: "user",
+					content: prompt,
+				},
+			],
+			temperature: 0.8,
+		});
+		return response;
+	} catch (err) {
+		console.log(
+			"Caught error in getGptResponseForDietAnalysis() helper func due to "
+		);
+		console.error(err);
+		return null;
+	}
 }
 
-
 export async function getDietPlanAnalysisPrompt(userDetails, dietPlan) {
-    const prompt = `
+	const prompt = `
         User details:${JSON.stringify(userDetails)}
 
         Diet plan:${JSON.stringify(dietPlan)}
@@ -201,6 +216,6 @@ export async function getDietPlanAnalysisPrompt(userDetails, dietPlan) {
         }
 
         Return ONLY a valid JSON object without any explanations, comments, or extra formatting. Ensure the JSON is valid.
-    `
-    return prompt;
+    `;
+	return prompt;
 }
