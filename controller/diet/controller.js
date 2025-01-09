@@ -226,40 +226,61 @@ export async function getDietPlanWithAI(req, res) {
 		cuisine: cuisine || null,
 	};
 
+	console.log('Processed userDetailsBody:', userDetailsBody);
+
 	try {
-		// const transactionExists = await verifyHistoryIdExist(userId, historyId);
-		// if (!transactionExists)
-		//     return res.status(402).json({ code: 0, message: "Transaction not found or has already been used for the provided history ID." });
+		console.log('Verifying transaction...');
+		const transactionExists = await verifyHistoryIdExist(userId, historyId);
+		console.log('Transaction exists:', transactionExists);
 
+		if (!transactionExists) {
+			console.log('Transaction verification failed');
+			return res.status(402).json({
+				code: 0,
+				message: "Transaction not found or has already been used for the provided history ID.",
+			});
+		}
+
+		console.log('Generating GPT prompt...');
 		const prompt = getDietPlanSuggestPrompt(userDetailsBody);
-		const response = await getGptResponse(prompt);
+		// console.log('Generated prompt:', prompt);
 
-		if (response == null) throw { statusCode: 400, code: 0 };
+		console.log('Calling GPT API...');
+		const response = await getGptResponse(prompt);
+		console.log('GPT API response successfully received' );
+
+		if (response == null) {
+			console.log('Null response from GPT');
+			throw { statusCode: 400, code: 0 };
+		}
 
 		const data = [];
+		console.log('Processing GPT choices...');
 		for (const element of response.choices) {
 			const dietPlan = element.message.content;
+			console.log('Processing diet plan:', dietPlan);
 			const dietPlanObject = JSON.parse(dietPlan);
 			data.push(dietPlanObject);
 		}
 
-		// updateTransactionAsChargedAfterAI(userId, historyId);
-
+		console.log('Successfully processed diet plan. Returning data:', data);
 		return res.status(200).json({ code: 1, data: data });
 	} catch (err) {
+		console.log('Error details:', {
+			error: err,
+			message: err.message,
+			stack: err.stack
+		});
+		
 		let message = "Failed to suggest diet plan with AI.";
 		const statusCode = err.statusCode ? err.statusCode : 500;
 		let code = err.code ? err.code : -1;
 
-		// const revokeResponse = await revokeChargedCoinsForAI(userId, historyId, coinsToCharge);
-		// if (revokeResponse.code != 1) {
-		//     message = "Failed to suggest diet plan with AI and unable to refund the coins.";
-		// }
-
-		console.log(
-			"Caught exception in controller.diet.controller.getDietPlanWithAI due to "
-		);
-		console.error(err);
+		console.log('Sending error response:', {
+			statusCode,
+			code,
+			message
+		});
 
 		return res.status(statusCode).json({ code: code, message: message });
 	}
