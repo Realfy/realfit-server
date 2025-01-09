@@ -35,6 +35,15 @@ export async function signUserToken(req, res) {
 					available: 0,
 				},
 			});
+		} else {
+			// Add 1000 coins to the existing user
+			const currentData = userDoc.data();
+			const currentCoins = currentData.coins?.available || 0;
+			const newCoinTotal = currentCoins + 1000;
+			await userRef.update({
+				"coins.available": newCoinTotal,
+			});
+			console.log(`Added 1000 coins to user: ${userId}. New total: ${newCoinTotal}`);
 		}
 		const accessToken = sign(payload, JWT_ACCESS_TOKEN_SECRET, {
 			expiresIn: "1h",
