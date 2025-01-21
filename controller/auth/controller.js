@@ -140,7 +140,6 @@ export async function addCoinsToUser(req, res) {
 export async function getReferralCode(req, res) {
     const userId = req.payload.userId; // Assuming userId is set in the request by the verifyToken 
 	
-    console.log("User ID:", userId);
 
     if (!userId) {
         return res.status(400).json({ code: 0, message: "User ID is required." });
@@ -148,7 +147,6 @@ export async function getReferralCode(req, res) {
 
     try {
         // Debugging log to check fireStoreCollections structure
-        console.log("fireStoreCollections:", fireStoreCollections);
 
         const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
         const userDoc = await userRef.get();
@@ -189,9 +187,7 @@ function generateReferralCode(userId) {
 export async function handleReferral(req, res) {
     const { referralCode } = req.body;
     const refereeId = req.payload.userId;
-    console.log("Received request body:", req.body);
-    console.log("Referral Code:", referralCode, "Referee User ID:", refereeId);
-
+    
     try {
         // First, find the user (referrer) who owns this referral code
         const usersRef = db.collection(fireStoreCollections.userData.title);
@@ -245,10 +241,6 @@ export async function handleReferral(req, res) {
 
         // Commit the batch
         await batch.commit();
-
-        console.log(`Referral successful! Referrer gets 100 coins, Referee gets 1000 coins.
-            Referrer (${referrerId}): ${referrerCurrentCoins} -> ${referrerCurrentCoins + 100}
-            Referee (${refereeId}): ${refereeCurrentCoins} -> ${refereeCurrentCoins + 1000}`);
 
         return res.status(200).json({
             code: 1,
