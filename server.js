@@ -31,10 +31,6 @@ app.get('/', async (req, res) => {
     res.send("Realfy Server is running");
 });
 
-// Test route
-app.get('/', async (req, res) => {
-    res.send("Realfy Server is running");
-});
 
 // Test route
 app.post('/', async (req, res) => {

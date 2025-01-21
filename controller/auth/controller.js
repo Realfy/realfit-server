@@ -136,3 +136,134 @@ export async function addCoinsToUser(req, res) {
         });
     }
 }
+
+export async function getReferralCode(req, res) {
+    const userId = req.payload.userId; // Assuming userId is set in the request by the verifyToken 
+	
+    console.log("User ID:", userId);
+
+    if (!userId) {
+        return res.status(400).json({ code: 0, message: "User ID is required." });
+    }
+
+    try {
+        // Debugging log to check fireStoreCollections structure
+        console.log("fireStoreCollections:", fireStoreCollections);
+
+        const userRef = db.collection(fireStoreCollections.userData.title).doc(userId);
+        const userDoc = await userRef.get();
+
+        if (!userDoc.exists) {
+            return res.status(404).json({ code: 0, message: "User not found." });
+        }
+
+        const userData = userDoc.data();
+        let referralCode = userData.referralCode;
+
+        // Generate a new referral code if it doesn't exist
+        if (!referralCode) {
+            referralCode = generateReferralCode(userId); // Implement this function to generate a unique code
+            await userRef.update({ referralCode: referralCode });
+        }
+
+        return res.status(200).json({
+            code: 1,
+            message: "Referral code retrieved successfully.",
+            referralCode: referralCode,
+        });
+    } catch (error) {
+        console.error("Error retrieving referral code:", error);
+        return res.status(500).json({
+            code: -1,
+            message: "Failed to retrieve referral code. Please try again.",
+        });
+    }
+}
+
+// Function to generate a unique referral code
+function generateReferralCode(userId) {
+    // You can customize this logic to generate a unique code
+    return `REF-${userId.substring(0, 6)}-${Date.now().toString(36)}`;
+}
+
+export async function handleReferral(req, res) {
+    const { referralCode } = req.body;
+    const refereeId = req.payload.userId;
+    console.log("Received request body:", req.body);
+    console.log("Referral Code:", referralCode, "Referee User ID:", refereeId);
+
+    try {
+        // First, find the user (referrer) who owns this referral code
+        const usersRef = db.collection(fireStoreCollections.userData.title);
+        const referrerSnapshot = await usersRef
+            .where('referralCode', '==', referralCode)
+            .get();
+
+        if (referrerSnapshot.empty) {
+            return res.status(404).json({ code: 0, message: "Invalid referral code." });
+        }
+
+        const referrerDoc = referrerSnapshot.docs[0];
+        const referrerId = referrerDoc.id;
+        
+        if (referrerId === refereeId) {
+            return res.status(400).json({ code: 0, message: "Cannot use your own referral code." });
+        }
+
+        // Check if referee has already used a referral code
+        const refereeRef = usersRef.doc(refereeId);
+        const refereeDoc = await refereeRef.get();
+
+        if (!refereeDoc.exists) {
+            return res.status(404).json({ code: 0, message: "Referee user not found." });
+        }
+
+        const refereeData = refereeDoc.data();
+        if (refereeData.hasUsedReferral) {
+            return res.status(400).json({ 
+                code: 0, 
+                message: "You have already used a referral code before." 
+            });
+        }
+
+        const batch = db.batch();
+
+        // Update referrer: add coins and remove referral code
+        const referrerData = referrerDoc.data();
+        const referrerCurrentCoins = referrerData.coins?.available || 0;
+        batch.update(referrerDoc.ref, {
+            'coins.available': referrerCurrentCoins + 100,
+            referralCode: null // Remove the referral code
+        });
+
+        // Update referee: add coins and mark as having used a referral
+        const refereeCurrentCoins = refereeData.coins?.available || 0;
+        batch.update(refereeRef, {
+            'coins.available': refereeCurrentCoins + 1000,
+            hasUsedReferral: true // Mark that this user has used a referral code
+        });
+
+        // Commit the batch
+        await batch.commit();
+
+        console.log(`Referral successful! Referrer gets 100 coins, Referee gets 1000 coins.
+            Referrer (${referrerId}): ${referrerCurrentCoins} -> ${referrerCurrentCoins + 100}
+            Referee (${refereeId}): ${refereeCurrentCoins} -> ${refereeCurrentCoins + 1000}`);
+
+        return res.status(200).json({
+            code: 1,
+            message: "Referral successful! Coins added to both users.",
+            data: {
+                referrerNewBalance: referrerCurrentCoins + 100,
+                refereeNewBalance: refereeCurrentCoins + 1000
+            }
+        });
+
+    } catch (error) {
+        console.error("Error handling referral:", error);
+        return res.status(500).json({
+            code: -1,
+            message: "Failed to process referral. Please try again.",
+        });
+    }
+}
