@@ -379,6 +379,11 @@ export async function saveCurrentDayDietPlan(req, res) {
 			String(currDate.getMonth() + 1).padStart(2, "0") +
 			"" +
 			String(currDate.getDate()).padStart(2, "0");
+
+		// Get the name of the current day
+		const options = { weekday: 'long' }; // Options for getting the full name of the day
+		const dayName = currDate.toLocaleDateString('en-US', options); // e.g., "Monday"
+
 		const userRef = db
 			.collection(fireStoreCollections.userData.title)
 			.doc(userId);
@@ -398,6 +403,7 @@ export async function saveCurrentDayDietPlan(req, res) {
 			{
 				data: plan,
 				date: currDate,
+				day: dayName // Save the name of the day
 			},
 			{ merge: true }
 		);
@@ -580,42 +586,47 @@ export async function getLatestDietTemplate(req, res) {
 	try {
 		let userId = req.payload.userId;
 		if (!isNaN(userId)) userId = "" + userId;
+
 		const userRef = db
 			.collection(fireStoreCollections.userData.title)
 			.doc(userId);
 		const userDoc = await userRef.get();
+
 		if (!userDoc.exists) {
-			return res
-				.status(404)
-				.json({ code: 0, message: "User not found." });
+			return res.status(404).json({ code: 0, message: "User not found." });
 		}
-		const latestDoc = userRef
-			.collection(
-				fireStoreCollections.userData.subCollections.diet.dietTemplate
-					.title
-			)
-			.orderBy("updated_at", "desc")
+
+		// Query the daily_plan collection instead of dietTemplate
+		const dailyPlanRef = userRef
+			.collection(fireStoreCollections.userData.subCollections.diet.everyDayPlan.title);
+		
+		// Log the path being queried
+		console.log(`Querying daily plans at path: ${dailyPlanRef.path}`);
+
+		// Get the latest daily plan document
+		const latestDocSnapshot = await dailyPlanRef
+			.orderBy("date", "desc") // Assuming you want to order by date
 			.limit(1)
 			.get();
-		if (!latestDoc.empty) {
-			const docData = latestDoc.docs[0].data();
-			return res.status(200).json({
-				code: 1,
-				message: "Returned recently updated diet plan template.",
-				data: docData,
-			});
+
+		// Check if the snapshot is empty
+		if (latestDocSnapshot.empty) {
+			return res.status(404).json({ code: 0, message: "No daily plan found for this user." });
 		}
-		return res
-			.status(404)
-			.json({ code: 0, message: "No diet plan template found" });
+
+		// Access the first document's data
+		const docData = latestDocSnapshot.docs[0].data();
+		return res.status(200).json({
+			code: 1,
+			message: "Returned recently updated daily plan.",
+			data: docData,
+		});
 	} catch (err) {
-		console.log(
-			"Caught error in controller.diet.controller.getLatestDietTemplate() due to: "
-		);
+		console.log("Caught error in controller.diet.controller.getLatestDietTemplate() due to: ");
 		console.error(err);
 		return res.json({
 			code: -1,
-			message: "Failed to get latest diet plan template.",
+			message: "Failed to get latest daily plan.",
 		});
 	}
 }
@@ -731,15 +742,12 @@ export async function getDietPlanList(req, res) {
 			.doc(userId);
 		const userDoc = await userRef.get();
 		if (!userDoc.exists) {
-			return res
-				.status(404)
-				.json({ code: 0, message: "User not found." });
+			return res.status(404).json({ code: 0, message: "User not found." });
 		}
+
+		// Query the daily_plan collection instead of dietTemplate
 		const dietPlanQuery = userRef
-			.collection(
-				fireStoreCollections.userData.subCollections.diet.everyDayPlan
-					.title
-			)
+			.collection(fireStoreCollections.userData.subCollections.diet.everyDayPlan.title)
 			.orderBy("date", "desc")
 			.limit(limit)
 			.offset(skip);
@@ -757,14 +765,60 @@ export async function getDietPlanList(req, res) {
 				data: docData,
 			});
 		}
-		return res
-			.status(404)
-			.json({ code: 0, message: "No diet plans found." });
+		return res.status(404).json({ code: 0, message: "No diet plans found." });
 	} catch (err) {
-		console.log(
-			"Caught error in controller.diet.controller.getDietPlanList() due to: "
-		);
+		console.log("Caught error in controller.diet.controller.getDietPlanList() due to: ");
 		console.error(err);
 		return res.json({ code: -1, message: "Failed to get diet plan list" });
+	}
+}
+
+export async function getDietPlanTemplates(req, res) {
+	try {
+		let userId = req.payload.userId;
+		
+		if (!isNaN(userId)) userId = "" + userId;
+
+		const userRef = db
+			.collection(fireStoreCollections.userData.title)
+			.doc(userId);
+		const userDoc = await userRef.get();
+
+		if (!userDoc.exists) {
+			return res.status(404).json({ code: 0, message: "User not found." });
+		}
+
+		// Query the daily_plan collection
+		const dailyPlanRef = userRef
+			.collection(fireStoreCollections.userData.subCollections.diet.everyDayPlan.title);
+		
+		// Log the path being queried
+		console.log(`Querying daily plans at path: ${dailyPlanRef.path}`);
+
+		// Get all daily plans for the user
+		const dailyPlanSnapshot = await dailyPlanRef.get();
+
+		if (dailyPlanSnapshot.empty) {
+			return res.status(404).json({ code: 0, message: "No daily plans found for this user." });
+		}
+
+		// Access the documents' data
+		const templatesData = dailyPlanSnapshot.docs.map((doc) => ({
+			id: doc.id,
+			...doc.data(),
+		}));
+
+		return res.status(200).json({
+			code: 1,
+			message: "Returned diet plan templates.",
+			data: templatesData,
+		});
+	} catch (err) {
+		console.log("Caught error in controller.diet.controller.getDietPlanTemplates() due to: ");
+		console.error(err);
+		return res.json({
+			code: -1,
+			message: "Failed to get diet plan templates.",
+		});
 	}
 }
