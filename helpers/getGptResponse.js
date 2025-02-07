@@ -120,13 +120,10 @@ export async function getGptResponseForWorkoutPlan(prompt) {
 }
 
 export function getExercisePlanSuggestPrompt(userDetails, cmsData) {
-	const prompt = `You are a expert gym trainer.
+	const prompt = `You are an expert gym planner use as much knowledge you have .
         Generate a workout plan based on the following user details:
-
         - User details: ${JSON.stringify(userDetails)}
-        - Available exercises (cmsData): ${JSON.stringify(
-			cmsData
-		)} (Ensure that the exercise ID matches the IDs in this list)
+        (Ensure that the exercise ID matches the IDs in this list)
         - Parameters provided in user details:
             - workoutDays: Number of days the user works out in a week.
             - injuries: List of any injuries the user has or a description of user injuries.
@@ -139,20 +136,21 @@ export function getExercisePlanSuggestPrompt(userDetails, cmsData) {
         Based on these details, suggest a workout plan from the available list of exercises.
 
         The response should have a list of objects where each object represents an exercise. Each object should follow this structure:
-		The exercise of the day shuld be totally different from the previous day exercise and should be according to the user details and user goals and all exercises of same day should be together and should be according to the user details and user goals , a single day can have more than one exercise but all exercises should be according to the user details and user goals , for days with no exercise mention rest day , ensure rest days are also present in the response , ensure proper rest days are present in the response 
+		The exercise of the day shuld be totally different from the previous day exercise and should be according to the user details and user goals and all exercises of same day should be together  a single day should have more than two title ( less than 5 any random number of titles between them but not exactly 2 for all )  related to the bodyPart but all exercises should be according to the user details and user goals , for days with no exercise mention rest day , ensure rest days are also present in the response , ensure proper rest days are present in the response th
+		Each day should target different body parts and should be according to the user details and user goals
 		{
 			"day": "Day of the week for this exercise , consider all the days of the week, also consider rest days":{
-				"exercise": {
-					"id": "ID of the exercise from the available exercises list (should match the ID provided in cmsData)",
+				"bodyPart": "Body part targeted by the exercise",
+				"exercise": [{
 					"title": "Name of the exercise from the available exercises list",
-					"sets": "Number of sets based on user experience and user details",
-					"reps": "Array of numbers. Each number represents the number of reps the user should do in each set"
+					"sets": "Number of sets based on user experience and user details.",
+					"reps": "Array of numbers. Each number represents the number of reps the user should do in each set. The reps shuld not be the same it shuld be progressive overload"
 					}
+]
 					}
 					}
 
         Return ONLY a valid JSON object without any explanations, comments, or extra formatting. Ensure the JSON is valid.
-
     `;
 	return prompt;
 }
