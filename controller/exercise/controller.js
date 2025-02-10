@@ -89,7 +89,7 @@ export async function getExerciseDataFromCmsWithFilters(request, response) {
         const result = await client.request(readItems(directusCollections.exercise, {
             fields: ['id', 'title', 'purpose', 'training_level', 'sets', 'reps',
                 {
-                    muscle_group: [
+                    muscle_group: [ 
                         { exercise_muscle_group_id: ['title', { category: ['title'] }] }
                     ]
                 }, 'video_preview', { images: ['directus_files_id'] },
@@ -149,13 +149,11 @@ export async function getExercisePlanWithAI(req, res) {
         userDetails.userHeight = userHeight;
         userDetails.equipmentLevel = equipmentLevel;
 
-        const cmsData = await client.request(readItems(directusCollections.exercise, {
-            fields: ['id', 'title']
-        }));
-        const prompt = getExercisePlanSuggestPrompt(userDetails, cmsData);
+        const prompt = getExercisePlanSuggestPrompt(userDetails);
         const response = await getGptResponseForWorkoutPlan(prompt);
         if (response == null)
             throw { statusCode: 400, code: 0 };
+        // console.log("Response before parsing:", response);
         const data = [];
         for (const element of response.choices) {
             const dietPlan = element.message.content
