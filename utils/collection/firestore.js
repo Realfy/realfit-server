@@ -29,6 +29,7 @@ export const fireStoreCollections = {
                 everyDayPlan: { title: 'daily_plan' }, // This collection stores every day diet plan of user.
                 dietTemplate: { title: 'template' } // This collection stores the base template of diet plan that can be suggested by an AI or by an expert.
             },
+            dietTracker: { title: 'diet_tracker' },
             exercise:{
                 everyDayPlan: { title: 'daily_plan' }, // This collection stores every day exercise plan of user.
                 exerciseTemplate: { title: 'template' } // This collection stores the base template of exercise plan that can be suggested by an AI or by an expert.

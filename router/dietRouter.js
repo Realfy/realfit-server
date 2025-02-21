@@ -7,7 +7,9 @@ import {
     getLatestDietTemplate,
     getTemplateById,
     saveCurrentDayDietPlan,
-    saveLatestDietPlanTemplate
+    saveLatestDietPlanTemplate,
+    saveDietTracker,
+    getDietTrackerList
 } from "../controller/diet/controller.js";
 
 const router = express.Router();
@@ -23,5 +25,10 @@ router.get('/v1/template/recent', getLatestDietTemplate);
 router.get('/v1/template/:id', getTemplateById);
 router.get('/v1/current/list', getDietPlanList);
 router.get('/v1/current/:id', getDietPlanWithId);
+
+//tracker
+router.post('/v1/tracker/save', saveDietTracker);
+router.get('/v1/tracker/list', getDietTrackerList);
+// router.get('/v1/tracker/:id', getDietTrackerWithId);
 
 export default router;

@@ -822,3 +822,144 @@ export async function getDietPlanTemplates(req, res) {
 		});
 	}
 }
+
+export async function saveDietTracker(req, res) {
+	try {
+		let userId = req.payload.userId;
+		if (!isNaN(userId)) userId = "" + userId;
+		
+		const { 
+			date, 
+			mealType, 
+			calories,
+			quantity,
+			unit,
+			macros,
+			mealName,
+			standardQuantity
+		} = req.body;
+
+		// Validate required fields
+		if (!date || !mealType || !calories || !quantity || !unit || !mealName || !standardQuantity) {
+			return res.status(400).json({
+				code: 0,
+				message: "Please provide all required fields (date, mealType, calories, quantity, unit, mealName, standardQuantity).",
+			});
+		}
+
+		// Validate macros structure if provided
+		if (macros && typeof macros === 'object') {
+			const validMacros = {
+				protein: macros.protein || 0,
+				carbs: macros.carbs || 0,
+				fats: macros.fats || 0,
+				fiber: macros.fiber || 0
+			};
+			// Optional validation for macros values
+			if (isNaN(validMacros.protein) || isNaN(validMacros.carbs) || 
+				isNaN(validMacros.fats) || isNaN(validMacros.fiber)) {
+				return res.status(400).json({
+					code: 0,
+					message: "Macros values must be numbers.",
+				});
+			}
+		}
+
+		// Validate date format
+		if (isNaN(Date.parse(date))) {
+			return res.status(400).json({
+				code: 0,
+				message: "Invalid date format. Please use YYYY-MM-DD format.",
+			});
+		}
+
+		const userRef = db
+			.collection(fireStoreCollections.userData.title)
+			.doc(userId);
+			
+		const userDoc = await userRef.get();
+		if (!userDoc.exists) {
+			return res.status(404).json({ code: 0, message: "User not found." });
+		}
+
+		// Fixed path to dietTracker collection
+		const dietTrackerRef = userRef
+			.collection(fireStoreCollections.userData.subCollections.dietTracker.title)
+			.doc(date);
+
+		// Add or update the meal data
+		await dietTrackerRef.set({
+			[mealType]: {
+				mealName: mealName,
+				calories: calories,
+				standardQuantity: standardQuantity,
+				quantity: quantity,
+				unit: unit,
+				macros: macros || {
+					protein: 0,
+					carbs: 0,
+					fats: 0,
+					fiber: 0
+				},
+				timestamp: new Date()
+			}
+		}, { merge: true });
+
+		return res.status(200).json({
+			code: 1,
+			message: "Diet tracker updated successfully"
+		});
+
+	} catch (err) {
+		console.log("Caught error in controller.diet.controller.saveDietTracker() due to: ");
+		console.error(err);
+		return res.status(500).json({
+			code: -1,
+			message: "Failed to save diet tracker.",
+		});
+	}
+}
+
+export async function getDietTrackerList(req, res) {
+	try {
+		let userId = req.payload.userId;
+		if (!isNaN(userId)) userId = "" + userId;
+
+		const userRef = db
+			.collection(fireStoreCollections.userData.title)
+			.doc(userId);
+		const userDoc = await userRef.get();
+		if (!userDoc.exists) {
+			return res.status(404).json({ code: 0, message: "User not found." });
+		}
+
+		const dietTrackerRef = userRef
+			.collection(fireStoreCollections.userData.subCollections.dietTracker.title);
+		const dietTrackerDoc = await dietTrackerRef.get();
+		if (dietTrackerDoc.empty) {
+			return res.status(404).json({ code: 0, message: "No diet tracker found for this user." });
+		}	
+
+		const dietTrackerData = dietTrackerDoc.docs.map((doc) => ({
+			id: doc.id,
+			...doc.data(),
+		}));
+
+		return res.status(200).json({
+			code: 1,
+			message: "Returned diet tracker list",
+			data: dietTrackerData,
+		});
+	} catch (err) {
+		console.log("Caught error in controller.diet.controller.getDietTrackerList() due to: ");
+		console.error(err);
+		return res.status(500).json({
+			code: -1,
+			message: "Failed to get diet tracker list.",
+		});
+	}
+}
+
+
+
+
