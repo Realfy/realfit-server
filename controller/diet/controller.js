@@ -828,50 +828,76 @@ export async function saveDietTracker(req, res) {
 		let userId = req.payload.userId;
 		if (!isNaN(userId)) userId = "" + userId;
 		
-		const { 
-			date, 
-			mealType, 
-			calories,
-			quantity,
-			unit,
-			macros,
-			mealName,
-			standardQuantity
-		} = req.body;
+		// Handle both single object and array of objects
+		const mealEntries = Array.isArray(req.body) ? req.body : [req.body];
+		
+		// Group entries by date
+		const entriesByDate = mealEntries.reduce((acc, entry) => {
+			const { 
+				date, 
+				mealType, 
+				calories,
+				quantity,
+				unit,
+				macros,
+				mealName,
+				standardQuantity
+			} = entry;
 
-		// Validate required fields
-		if (!date || !mealType || !calories || !quantity || !unit || !mealName || !standardQuantity) {
-			return res.status(400).json({
-				code: 0,
-				message: "Please provide all required fields (date, mealType, calories, quantity, unit, mealName, standardQuantity).",
-			});
-		}
-
-		// Validate macros structure if provided
-		if (macros && typeof macros === 'object') {
-			const validMacros = {
-				protein: macros.protein || 0,
-				carbs: macros.carbs || 0,
-				fats: macros.fats || 0,
-				fiber: macros.fiber || 0
-			};
-			// Optional validation for macros values
-			if (isNaN(validMacros.protein) || isNaN(validMacros.carbs) || 
-				isNaN(validMacros.fats) || isNaN(validMacros.fiber)) {
-				return res.status(400).json({
-					code: 0,
-					message: "Macros values must be numbers.",
-				});
+			// Validate required fields
+			if (!date || !mealType || !calories || !quantity || !unit || !mealName || !standardQuantity) {
+				throw new Error("Please provide all required fields for each entry");
 			}
-		}
 
-		// Validate date format
-		if (isNaN(Date.parse(date))) {
-			return res.status(400).json({
-				code: 0,
-				message: "Invalid date format. Please use YYYY-MM-DD format.",
+			// Validate date format
+			if (isNaN(Date.parse(date))) {
+				throw new Error(`Invalid date format for ${date}. Please use YYYY-MM-DD format.`);
+			}
+
+			// Split mealName if it contains multiple meals
+			const mealNames = mealName.split(',').map(name => name.trim());
+
+			// Initialize date entry if it doesn't exist
+			if (!acc[date]) {
+				acc[date] = {
+					date: date, // Store date separately
+					meals: {}
+				};
+			}
+
+			// Initialize meal type array if it doesn't exist
+			if (!acc[date].meals[mealType]) {
+				acc[date].meals[mealType] = [];
+			}
+
+			// Add each meal as a separate entry
+			mealNames.forEach((individualMealName) => {
+				// Skip empty meal names
+				if (!individualMealName) return;
+
+				// Generate a unique ID for each meal
+				const mealId = `${date}-${mealType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+				// Add meal entry to the appropriate date and meal type
+				acc[date].meals[mealType].push({
+					id: mealId,
+					mealName: individualMealName,
+					calories: calories,
+					standardQuantity,
+					quantity: quantity,
+					unit,
+					macros: macros || {
+						protein: 0,
+						carbs: 0,
+						fats: 0,
+						fiber: 0
+					},
+					timestamp: new Date()
+				});
 			});
-		}
+
+			return acc;
+		}, {});
 
 		const userRef = db
 			.collection(fireStoreCollections.userData.title)
@@ -882,28 +908,18 @@ export async function saveDietTracker(req, res) {
 			return res.status(404).json({ code: 0, message: "User not found." });
 		}
 
-		// Fixed path to dietTracker collection
-		const dietTrackerRef = userRef
-			.collection(fireStoreCollections.userData.subCollections.dietTracker.title)
-			.doc(date);
+		// Save entries for each date
+		const batch = db.batch();
+		
+		for (const [date, dateData] of Object.entries(entriesByDate)) {
+			const dietTrackerRef = userRef
+				.collection(fireStoreCollections.userData.subCollections.dietTracker.title)
+				.doc(date);
+			
+			batch.set(dietTrackerRef, dateData, { merge: true });
+		}
 
-		// Add or update the meal data
-		await dietTrackerRef.set({
-			[mealType]: {
-				mealName: mealName,
-				calories: calories,
-				standardQuantity: standardQuantity,
-				quantity: quantity,
-				unit: unit,
-				macros: macros || {
-					protein: 0,
-					carbs: 0,
-					fats: 0,
-					fiber: 0
-				},
-				timestamp: new Date()
-			}
-		}, { merge: true });
+		await batch.commit();
 
 		return res.status(200).json({
 			code: 1,
@@ -913,9 +929,9 @@ export async function saveDietTracker(req, res) {
 	} catch (err) {
 		console.log("Caught error in controller.diet.controller.saveDietTracker() due to: ");
 		console.error(err);
-		return res.status(500).json({
+		return res.status(400).json({
 			code: -1,
-			message: "Failed to save diet tracker.",
+			message: err.message || "Failed to save diet tracker.",
 		});
 	}
 }
@@ -936,19 +952,50 @@ export async function getDietTrackerList(req, res) {
 		const dietTrackerRef = userRef
 			.collection(fireStoreCollections.userData.subCollections.dietTracker.title);
 		const dietTrackerDoc = await dietTrackerRef.get();
+		
 		if (dietTrackerDoc.empty) {
 			return res.status(404).json({ code: 0, message: "No diet tracker found for this user." });
-		}	
+		}   
 
-		const dietTrackerData = dietTrackerDoc.docs.map((doc) => ({
-			id: doc.id,
-			...doc.data(),
-		}));
+		const dietTrackerData = dietTrackerDoc.docs.reduce((acc, doc) => {
+			const data = doc.data();
+			
+			if (data.meals) {
+				// Convert nested meals structure back to flat array
+				Object.entries(data.meals).forEach(([mealType, meals]) => {
+					meals.forEach(meal => {
+						acc.push({
+							date: doc.id,
+							mealType,
+							calories: meal.calories,
+							quantity: meal.quantity,
+							unit: meal.unit,
+							mealName: meal.mealName,
+							standardQuantity: meal.standardQuantity,
+							macros: meal.macros,
+							id: meal.id
+						});
+					});
+				});
+			}
+			
+			return acc;
+		}, []);
+
+		// Sort by date and mealType
+		dietTrackerData.sort((a, b) => {
+			if (a.date !== b.date) {
+				return b.date.localeCompare(a.date); // Sort by date descending
+			}
+			// Define meal type order
+			const mealOrder = { breakfast: 1, lunch: 2, dinner: 3 };
+			return mealOrder[a.mealType] - mealOrder[b.mealType];
+		});
 
 		return res.status(200).json({
 			code: 1,
 			message: "Returned diet tracker list",
-			data: dietTrackerData,
+			data: dietTrackerData
 		});
 	} catch (err) {
 		console.log("Caught error in controller.diet.controller.getDietTrackerList() due to: ");
